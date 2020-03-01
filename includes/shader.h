@@ -125,3 +125,22 @@ static unsigned int CreateShader(const std::string& VertexShader, const std::str
     return program;
 
 }
+
+static std::string ParseCompute(const std::string& filepath)
+{
+    std::ifstream stream(filepath);
+
+    enum class ShaderType
+    {
+        NONE = -1, COMPUTE = 0
+    };
+
+    std::string line;
+    std::stringstream ss;
+    ShaderType type = ShaderType::NONE;
+    while(getline(stream,line))
+    {
+            ss << line << '\n';
+    }
+    return {ss.str()};
+}
