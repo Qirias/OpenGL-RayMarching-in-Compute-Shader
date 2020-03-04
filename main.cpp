@@ -5,10 +5,9 @@
 #include "includes/glm/glm.hpp"
 #include "includes/glm/gtc/matrix_transform.hpp"
 #include "includes/glm/gtc/type_ptr.hpp"
-#include <fstream>
 
-const unsigned int ScreenWidth = 512;
-const unsigned int ScreenHeight = 512;
+const unsigned int ScreenWidth = 1080;
+const unsigned int ScreenHeight = 1080;
 void processInput(GLFWwindow *window);
 
 int main(void)
@@ -68,23 +67,23 @@ int main(void)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, tex_w, tex_h, 0, GL_RGBA, GL_FLOAT, NULL);
     glBindImageTexture(0, tex_output, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
-    // int work_grp_cnt[3];
+    int work_grp_cnt[3];
 
-    // glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &work_grp_cnt[0]);
-    // glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &work_grp_cnt[1]);
-    // glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &work_grp_cnt[2]);
-    // printf("max global (total) work group size x:%i y:%i z:%i\n", work_grp_cnt[0], work_grp_cnt[1], work_grp_cnt[2]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &work_grp_cnt[0]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &work_grp_cnt[1]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &work_grp_cnt[2]);
+    printf("max global (total) work group size x:%i y:%i z:%i\n", work_grp_cnt[0], work_grp_cnt[1], work_grp_cnt[2]);
 
-    // int work_grp_size[3];
+    int work_grp_size[3];
 
-    // glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &work_grp_size[0]);
-    // glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &work_grp_size[1]);
-    // glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &work_grp_size[2]);
-    // printf("max local (in one shader) work group sizes x:%i y:%i z:%i\n", work_grp_size[0], work_grp_size[1], work_grp_size[2]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &work_grp_size[0]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &work_grp_size[1]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &work_grp_size[2]);
+    printf("max local (in one shader) work group sizes x:%i y:%i z:%i\n", work_grp_size[0], work_grp_size[1], work_grp_size[2]);
 
-    // int work_grp_inv;
-    // glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_grp_inv);
-    // printf("max local work group invocations %i\n", work_grp_inv);
+    int work_grp_inv;
+    glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_grp_inv);
+    printf("max local work group invocations %i\n", work_grp_inv);
     
     //Quad's Fragment and Vertex shader
     ShaderProgramSource basic = ParseShader("includes/Basic.glsl");
@@ -92,21 +91,13 @@ int main(void)
 
     //Compute Shader
     const std::string& compShader = ParseCompute("includes/computeShader.glsl");
-    const char *src = compShader.c_str();
-    unsigned int marcher_string = glCreateShader(GL_COMPUTE_SHADER);
-    glShaderSource(marcher_string, 1, &src, NULL);
-    glCompileShader(marcher_string);
-
-    unsigned int marching = glCreateProgram();
-    glAttachShader(marching, marcher_string);
-    glLinkProgram(marching);
-    
+    unsigned int marching = CreateCompute(compShader);
  
     //Game loop
     while (!glfwWindowShouldClose(window))
     {
         useShader(marching);
-        glDispatchCompute((unsigned int)tex_w, (unsigned int)tex_h, 1);
+        glDispatchCompute((unsigned int)tex_w / 32, (unsigned int)tex_h / 32, 1);
 
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
