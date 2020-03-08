@@ -111,7 +111,7 @@ int main(void)
         setFloat(marching, "c_i", ci);
 
         // Number of groups in dispach: X, Y, Z
-        glDispatchCompute(SCREEN_WIDTH / 32, SCREEN_HEIGHT / 32, 1);
+        glDispatchCompute(SCREEN_WIDTH / 42, SCREEN_HEIGHT / 42, 1);
 
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 

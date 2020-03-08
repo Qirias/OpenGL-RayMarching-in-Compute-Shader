@@ -1,12 +1,11 @@
 #version 430
-const int TILE_W      = 32;
-const int TILE_H      = 32;
+const int TILE_W      = 42;
+const int TILE_H      = 42;
 const ivec2 TILE_SIZE = ivec2(TILE_W, TILE_H);
-layout(local_size_x = 32, local_size_y = 32) in;
+layout(local_size_x = 42, local_size_y = 42) in;
 layout(rgba32f, binding = 0) uniform image2D img_output;
 
 uniform float c_x, c_y, c_z, c_i;
-// int maxIt = 100;
 
 // clang-format off
 const vec3 color_map[] = {
@@ -35,7 +34,7 @@ int Mandelbrot(double zreal, double zimaginary, double creal, double cimaginary,
     int it = 0;
     while (it < maxIt && zreal * zreal + zimaginary * zimaginary < 4.0) {
         double xtemp = zreal * zreal - zimaginary * zimaginary + creal;
-        zimaginary   = 2 * zreal * zimaginary + cimaginary;
+        zimaginary   = 2.0lf * zreal * zimaginary + cimaginary;
         zreal        = xtemp;
         it           = it + 1;
     }
@@ -53,28 +52,14 @@ void main()
 
     int maxIt = int(c_i);
 
-    ivec2 dims = imageSize(img_output);
+    // ivec2 dims = imageSize(img_output);
 
-    double x = (double(pixel_coords.x * 2 - dims.x) / (dims.x / 1.5)) * c_z + c_x;
-    double y = (double(pixel_coords.y * 2 - dims.y) / (dims.y / 1.5)) * c_z + c_y;
+    double x = pixel_coords.x / 1024.0lf * c_z + c_x;
+    double y = pixel_coords.y / 1024.0lf * c_z + c_y;
 
-    double width  = dims.x;
-    double height = dims.y;
 
-    // float x = float(pixel_coords.x / float((width - 1) / 3.5) - 2.5);
-    // float y = float(pixel_coords.y / float((height - 1) / 2) - 1.5);
+    int n = Mandelbrot(0.0lf, 0.0lf, x, y, maxIt);
 
-    double zreal = 0, zimaginary = 0;
-    double creal = x, cimaginary = y;
-
-    int n = Mandelbrot(zreal, zimaginary, creal, cimaginary, maxIt);
-
-    // float r = (n * 4 % 255) / 100;
-    // float g = (n * n % 255) / 100;
-    // float b = (n * 8 % 255) / 100;
-
-    // vec3 color = vec3(r, g, b);
-    // pixel      = vec4(color, 1.0);
 
     int row_index = (n * 100 / maxIt % 17);
     pixel         = vec4((n == maxIt ? vec3(0.0) : color_map[ row_index ]), 1.0);
