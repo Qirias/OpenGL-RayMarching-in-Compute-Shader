@@ -10,7 +10,7 @@ const unsigned int SCREEN_WIDTH  = 1024;
 const unsigned int SCREEN_HEIGHT = 1024;
 void processInput(GLFWwindow *window);
 
-float cx, cy;
+float cx = -0.5, cy, cz = 1.0f, ci = 100.0f;
 
 int main(void)
 {
@@ -107,6 +107,8 @@ int main(void)
 
         setFloat(marching, "c_x", cx);
         setFloat(marching, "c_y", cy);
+        setFloat(marching, "c_z", cz);
+        setFloat(marching, "c_i", ci);
 
         // Number of groups in dispach: X, Y, Z
         glDispatchCompute(SCREEN_WIDTH / 32, SCREEN_HEIGHT / 32, 1);
@@ -135,12 +137,9 @@ int main(void)
 
         glfwSwapBuffers(window);
         glfwPollEvents();
-        // int skata;
-        // std::cin >> skata;
     }
     glDeleteVertexArrays(1, &quadVAO);
     glDeleteBuffers(1, &quadVBO);
-    // std::cout << "Here";
 
     glfwTerminate();
     return 0;
@@ -152,16 +151,24 @@ void processInput(GLFWwindow *window)
         glfwSetWindowShouldClose(window, true);
     if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) // Lines of Triangles
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) // Fill the Triangles
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) // Fill the Triangles
-        cx -= 0.1;
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) // Fill the Triangles
-        cx += 0.1;
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) // Fill the Triangles
-        cy += 0.1;
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) // Fill the Triangles
-        cy -= 0.1;
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+        cx -= 0.1 * cz;
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+        cx += 0.1 * cz;
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+        cy += 0.1 * cz;
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+        cy -= 0.1 * cz;
+    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
+        cz -= 0.02 * cz;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
+        cz += 0.04 * cz;
+    if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
+        ci += 10;
+    if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS)
+        ci -= 10;
 }
 // g++ main.cpp -lGL -lglfw && ./a.out

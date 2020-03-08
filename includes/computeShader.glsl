@@ -5,7 +5,8 @@ const ivec2 TILE_SIZE = ivec2(TILE_W, TILE_H);
 layout(local_size_x = 32, local_size_y = 32) in;
 layout(rgba32f, binding = 0) uniform image2D img_output;
 
-uniform float c_x, c_y;
+uniform float c_x, c_y, c_z, c_i;
+// int maxIt = 100;
 
 // clang-format off
 const vec3 color_map[] = {
@@ -29,15 +30,14 @@ const vec3 color_map[] = {
 };
 // clang-format on
 
-int Mandelbrot(float zreal, float zimaginary, float creal, float cimaginary, int maxIt)
+int Mandelbrot(double zreal, double zimaginary, double creal, double cimaginary, int maxIt)
 {
-
     int it = 0;
     while (it < maxIt && zreal * zreal + zimaginary * zimaginary < 4.0) {
-        float xtemp = zreal * zreal - zimaginary * zimaginary + creal;
-        zimaginary  = 2 * zreal * zimaginary + cimaginary;
-        zreal       = xtemp;
-        it          = it + 1;
+        double xtemp = zreal * zreal - zimaginary * zimaginary + creal;
+        zimaginary   = 2 * zreal * zimaginary + cimaginary;
+        zreal        = xtemp;
+        it           = it + 1;
     }
     return it;
 }
@@ -50,21 +50,22 @@ void main()
     const ivec2 thread_xy    = ivec2(gl_LocalInvocationID);
     const ivec2 pixel_coords = tile_xy * TILE_SIZE + thread_xy;
     // ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
-    int maxIt = 100;
+
+    int maxIt = int(c_i);
 
     ivec2 dims = imageSize(img_output);
 
-    float x = (float(pixel_coords.x * 2 - dims.x * 1.33) / (dims.x / 1.5)) + c_x;
-    float y = (float(pixel_coords.y * 2 - dims.y) / (dims.y / 1.5)) + c_y;
+    double x = (double(pixel_coords.x * 2 - dims.x) / (dims.x / 1.5)) * c_z + c_x;
+    double y = (double(pixel_coords.y * 2 - dims.y) / (dims.y / 1.5)) * c_z + c_y;
 
-    float width  = dims.x;
-    float height = dims.y;
+    double width  = dims.x;
+    double height = dims.y;
 
     // float x = float(pixel_coords.x / float((width - 1) / 3.5) - 2.5);
     // float y = float(pixel_coords.y / float((height - 1) / 2) - 1.5);
 
-    float zreal = 0, zimaginary = 0;
-    float creal = x, cimaginary = y;
+    double zreal = 0, zimaginary = 0;
+    double creal = x, cimaginary = y;
 
     int n = Mandelbrot(zreal, zimaginary, creal, cimaginary, maxIt);
 
