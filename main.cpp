@@ -103,6 +103,7 @@ int main(void)
     // Game loop
     while (!glfwWindowShouldClose(window)) {
         useShader(marching);
+        setFloat(marching, "iTime", (float)glfwGetTime());
 
         // Number of groups in dispach: X, Y, Z
         glDispatchCompute(SCREEN_WIDTH / 32, SCREEN_HEIGHT / 32, 1);

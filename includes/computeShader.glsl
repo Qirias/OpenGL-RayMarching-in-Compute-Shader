@@ -12,6 +12,9 @@ float sdSphere(vec3 p, float r);
 float sdf(vec3 pos);
 float castRay(vec3 rayOrigin, vec3 rayDir);
 vec3 render(vec3 rayOrigin, vec3 rayDir);
+vec3 sphereNormal(vec3 pos);
+
+uniform float iTime;
 
 void main()
 {
@@ -77,9 +80,32 @@ float castRay(vec3 rayOrigin, vec3 rayDir)
 vec3 render(vec3 rayOrigin, vec3 rayDir)
 {
     float t = castRay(rayOrigin, rayDir);
+    vec3 col;
+    vec3 L = normalize(vec3(sin(iTime), 2.0, cos(iTime)));
 
-    // Visualize depth
-    vec3 col = vec3(1.0 - t * 0.075);
+    if (t == -1.0) {
+        col = vec3(0.30, 0.36, 0.60) - (rayDir.y * 0.7);
+    }
+    else {
+        vec3 pos = rayOrigin + rayDir * t;
+        vec3 N   = sphereNormal(pos);
+        col      = N * vec3(0.5) + vec3(0.5);
 
+        float NoL         = max(dot(N, L), 0.0);
+        vec3 LDirectional = vec3(0.9, 0.9, 0.8) * NoL;
+        vec3 LAmbient     = vec3(0.03, 0.04, 0.1);
+        vec3 diffuse      = col * (LDirectional + LAmbient);
+        col               = diffuse;
+    }
+    // Gamma Correction
+    col = pow(col, vec3(0.4545));
     return col;
+}
+
+vec3 sphereNormal(vec3 pos)
+{
+    float c = sdf(pos);
+
+    vec2 eps_zero = vec2(0.001, 0.0);
+    return normalize(vec3(sdf(pos + eps_zero.xyy), sdf(pos + eps_zero.yxy), sdf(pos + eps_zero.yyx)) - c);
 }
