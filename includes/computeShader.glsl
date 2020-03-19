@@ -1,6 +1,7 @@
 #version 430
-#define MAX_STEPS 64
-#define MIN_DISTANCE .0001
+#define MAX_STEPS 512
+#define MIN_DIST .0001
+
 const int TILE_W      = 32;
 const int TILE_H      = 32;
 const ivec2 TILE_SIZE = ivec2(TILE_W, TILE_H);
@@ -13,32 +14,9 @@ float sdf(vec3 pos);
 float castRay(vec3 rayOrigin, vec3 rayDir);
 vec3 render(vec3 rayOrigin, vec3 rayDir);
 vec3 sphereNormal(vec3 pos);
+float sdPlane(vec3 p, vec4 n);
 
 uniform float iTime;
-
-void main()
-{
-    vec4 pixel;
-    // Compute global x, y coordinates utilizing local group ID
-    const ivec2 tile_xy      = ivec2(gl_WorkGroupID);
-    const ivec2 thread_xy    = ivec2(gl_LocalInvocationID);
-    const ivec2 pixel_coords = tile_xy * TILE_SIZE + thread_xy;
-    // ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
-
-    ivec2 dims = imageSize(img_output);
-    float x    = (float(pixel_coords.x * 2 - dims.x) / dims.x);
-    float y    = (float(pixel_coords.y * 2 - dims.y) / dims.y);
-
-    vec3 camPos    = vec3(0, 0, -1);
-    vec3 camTarget = vec3(0, 0, 0);
-
-    vec2 uv     = vec2(x, y);
-    vec3 rayDir = getCameraRayDir(uv, camPos, camTarget);
-
-    pixel = vec4(render(camPos, rayDir), 1.0);
-
-    imageStore(img_output, pixel_coords, pixel);
-}
 
 vec3 getCameraRayDir(vec2 uv, vec3 camPos, vec3 camTarget)
 {
@@ -55,10 +33,14 @@ vec3 getCameraRayDir(vec2 uv, vec3 camPos, vec3 camTarget)
 
 float sdSphere(vec3 p, float r) { return length(p) - r; }
 
+float sdPlane(vec3 p, vec4 n) { return dot(p, n.xyz) + n.w; }
+
+float opU(float d1, float d2) { return (d1.x < d2) ? d1 : d2; }
+
 float sdf(vec3 pos)
 {
     float t = sdSphere(pos - vec3(0.0, 0.0, 10.0), 3.0);
-
+    t       = opU(t, sdPlane(pos, vec4(0, 1, 0, 5.5)));
     return t;
 }
 
@@ -68,7 +50,7 @@ float castRay(vec3 rayOrigin, vec3 rayDir)
 
     for (int i = 0; i < MAX_STEPS; i++) {
         float res = sdf(rayOrigin + rayDir * t);
-        if (res < (MIN_DISTANCE * t)) {
+        if (res < (MIN_DIST * t)) {
             return t;
         }
         t += res;
@@ -96,6 +78,11 @@ vec3 render(vec3 rayOrigin, vec3 rayDir)
         vec3 LAmbient     = vec3(0.03, 0.04, 0.1);
         vec3 diffuse      = col * (LDirectional + LAmbient);
         col               = diffuse;
+
+        float d = castRay(pos, L);
+        if (d != -1) {
+            col = vec3(col * 0.1);
+        }
     }
     // Gamma Correction
     col = pow(col, vec3(0.4545));
@@ -107,5 +94,33 @@ vec3 sphereNormal(vec3 pos)
     float c = sdf(pos);
 
     vec2 eps_zero = vec2(0.001, 0.0);
-    return normalize(vec3(sdf(pos + eps_zero.xyy), sdf(pos + eps_zero.yxy), sdf(pos + eps_zero.yyx)) - c);
+    // clang-format off
+    return normalize(vec3(sdf(pos + eps_zero.xyy),
+                          sdf(pos + eps_zero.yxy),
+                          sdf(pos + eps_zero.yyx)) - c);
+    // clang-format on
+}
+
+void main()
+{
+    vec4 pixel;
+    // Compute global x, y coordinates utilizing local group ID
+    const ivec2 tile_xy      = ivec2(gl_WorkGroupID);
+    const ivec2 thread_xy    = ivec2(gl_LocalInvocationID);
+    const ivec2 pixel_coords = tile_xy * TILE_SIZE + thread_xy;
+    // ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+
+    ivec2 dims = imageSize(img_output);
+    float x    = (float(pixel_coords.x * 2 - dims.x) / dims.x);
+    float y    = (float(pixel_coords.y * 2 - dims.y) / dims.y);
+
+    vec3 camPos    = vec3(0, 0, -1);
+    vec3 camTarget = vec3(0, 0, 0);
+
+    vec2 uv     = vec2(x, y);
+    vec3 rayDir = getCameraRayDir(uv, camPos, camTarget);
+
+    pixel = vec4(render(camPos, rayDir), 1.0);
+
+    imageStore(img_output, pixel_coords, pixel);
 }
