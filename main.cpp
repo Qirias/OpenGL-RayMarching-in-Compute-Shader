@@ -1,4 +1,5 @@
 #define GL_GLEXT_PROTOTYPES
+#include "includes/EulerAngles.h"
 #include "includes/glm/glm.hpp"
 #include "includes/glm/gtc/matrix_transform.hpp"
 #include "includes/glm/gtc/type_ptr.hpp"
@@ -10,6 +11,12 @@
 const unsigned int SCREEN_WIDTH  = 1024;
 const unsigned int SCREEN_HEIGHT = 1024;
 void processInput(GLFWwindow *window);
+void mouse_callback(GLFWwindow *window, double xpos, double ypos);
+
+float xaxis = 0.0, zaxis = -1.0;
+float lastX = SCREEN_WIDTH / 2.0;
+float lastY = SCREEN_HEIGHT / 2.0;
+MouseInput mouse;
 
 int main(void)
 {
@@ -28,6 +35,8 @@ int main(void)
         return -1;
     }
     glfwMakeContextCurrent(window);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // clang-format off
     float quadVertices[] = {
@@ -102,15 +111,21 @@ int main(void)
 
     // Game loop
     while (!glfwWindowShouldClose(window)) {
+        processInput(window);
+
         useShader(marching);
         setFloat(marching, "iTime", (float)glfwGetTime());
+        setFloat(marching, "zaxis", zaxis);
+        setFloat(marching, "xaxis", xaxis);
+        setVec3(marching, "mouse", mouse.MouseLookAt());
+
+        std::cout << "Pitch:\t" << mouse.getPitch() << std::endl;
+        std::cout << "Yaw:\t" << mouse.getYaw() << std::endl;
 
         // Number of groups in dispach: X, Y, Z
         glDispatchCompute(SCREEN_WIDTH / 32, SCREEN_HEIGHT / 32, 1);
 
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-        processInput(window);
 
         glClearColor(1.0, 1.0, 1.0, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -150,5 +165,27 @@ void processInput(GLFWwindow *window)
 
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        zaxis += 0.1;
+
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        zaxis -= 0.1;
+
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        xaxis += 0.1;
+
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        xaxis -= 0.1;
+}
+
+void mouse_callback(GLFWwindow *window, double xpos, double ypos)
+{
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos;
+    lastX         = xpos;
+    lastY         = ypos;
+
+    mouse.ProcessMouseOffset(xoffset, yoffset);
 }
 // g++ main.cpp -lGL -lglfw && ./a.out

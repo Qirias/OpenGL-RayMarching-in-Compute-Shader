@@ -1,5 +1,5 @@
 #version 430
-#define MAX_STEPS 512
+#define MAX_STEPS 256
 #define MIN_DIST .0001
 
 const int TILE_W      = 32;
@@ -16,12 +16,13 @@ vec3 render(vec3 rayOrigin, vec3 rayDir);
 vec3 sphereNormal(vec3 pos);
 float sdPlane(vec3 p, vec4 n);
 
-uniform float iTime;
+uniform float iTime, xaxis, zaxis;
+uniform vec3 mouse;
 
 vec3 getCameraRayDir(vec2 uv, vec3 camPos, vec3 camTarget)
 {
     // Calculate camera's "orthonormal basis", i.e. its transform matrix components
-    vec3 camForward = normalize(camTarget - camPos);
+    vec3 camForward = normalize((camTarget + mouse) - camPos);
     vec3 camRight   = normalize(cross(vec3(0.0, 1.0, 0.0), camForward));
     vec3 camUp      = normalize(cross(camForward, camRight));
 
@@ -44,7 +45,7 @@ float sdf(vec3 pos)
     return t;
 }
 
-float castRay(vec3 rayOrigin, vec3 rayDir)
+float RayMarch(vec3 rayOrigin, vec3 rayDir)
 {
     float t = 0.0; // Stores current distance along ray
 
@@ -61,7 +62,7 @@ float castRay(vec3 rayOrigin, vec3 rayDir)
 
 vec3 render(vec3 rayOrigin, vec3 rayDir)
 {
-    float t = castRay(rayOrigin, rayDir);
+    float t = RayMarch(rayOrigin, rayDir);
     vec3 col;
     vec3 L = normalize(vec3(sin(iTime), 2.0, cos(iTime)));
 
@@ -79,7 +80,7 @@ vec3 render(vec3 rayOrigin, vec3 rayDir)
         vec3 diffuse      = col * (LDirectional + LAmbient);
         col               = diffuse;
 
-        float d = castRay(pos, L);
+        float d = RayMarch(pos + N * .01, L);
         if (d != -1) {
             col = vec3(col * 0.1);
         }
@@ -114,7 +115,7 @@ void main()
     float x    = (float(pixel_coords.x * 2 - dims.x) / dims.x);
     float y    = (float(pixel_coords.y * 2 - dims.y) / dims.y);
 
-    vec3 camPos    = vec3(0, 0, -1);
+    vec3 camPos    = vec3(0, 0, 0);
     vec3 camTarget = vec3(0, 0, 0);
 
     vec2 uv     = vec2(x, y);
