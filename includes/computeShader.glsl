@@ -8,26 +8,43 @@ const ivec2 TILE_SIZE = ivec2(TILE_W, TILE_H);
 layout(local_size_x = 32, local_size_y = 32) in;
 layout(rgba32f, binding = 0) uniform image2D img_output;
 
-vec3 getCameraRayDir(vec2 uv, vec3 camPos, vec3 camTarget);
 float sdSphere(vec3 p, float r);
 float sdf(vec3 pos);
 float castRay(vec3 rayOrigin, vec3 rayDir);
 vec3 render(vec3 rayOrigin, vec3 rayDir);
 vec3 sphereNormal(vec3 pos);
 float sdPlane(vec3 p, vec4 n);
+vec4 lookAtRH(vec2 uv, vec3 eye, vec3 center);
 
-uniform float iTime, xaxis, zaxis;
+uniform float iTime, xaxis, zaxis, yaxis;
 uniform vec3 mouse;
 
-vec3 getCameraRayDir(vec2 uv, vec3 camPos, vec3 camTarget)
+vec4 lookAtRH(vec2 uv, vec3 eye, vec3 center)
 {
-    // Calculate camera's "orthonormal basis", i.e. its transform matrix components
-    vec3 camForward = normalize((camTarget + mouse) - camPos);
-    vec3 camRight   = normalize(cross(vec3(0.0, 1.0, 0.0), camForward));
-    vec3 camUp      = normalize(cross(camForward, camRight));
+    vec3 f = normalize(center - eye);
+    vec3 r = normalize(cross(vec3(0.0, 1.0, 0.0), f));
+    vec3 u = normalize(cross(f, r));
 
     float fPersp = radians(45);
-    vec3 vDir    = normalize(uv.x * camRight + uv.y * camUp + camForward * fPersp);
+    vec4 vDir    = vec4(normalize(uv.x * r + uv.y * u + f * fPersp), 1.0);
+
+    mat4 m;
+    m[ 0 ][ 0 ] = r.x;
+    m[ 0 ][ 1 ] = r.y;
+    m[ 0 ][ 2 ] = r.z;
+    m[ 1 ][ 0 ] = u.x;
+    m[ 1 ][ 1 ] = u.y;
+    m[ 1 ][ 2 ] = u.z;
+    m[ 2 ][ 0 ] = -f.x;
+    m[ 2 ][ 1 ] = -f.y;
+    m[ 2 ][ 2 ] = -f.z;
+
+    m[ 3 ][ 0 ] = -dot(r, center);
+    m[ 3 ][ 1 ] = -dot(u, center);
+    m[ 3 ][ 2 ] = dot(f, center);
+    m[ 3 ][ 3 ] = 1.0;
+
+    vDir = m * vDir;
 
     return vDir;
 }
@@ -40,7 +57,7 @@ float opU(float d1, float d2) { return (d1.x < d2) ? d1 : d2; }
 
 float sdf(vec3 pos)
 {
-    float t = sdSphere(pos - vec3(0.0, 0.0, 10.0), 3.0);
+    float t = sdSphere(pos - vec3(0.0, 0.0, -10.0), 3.0);
     t       = opU(t, sdPlane(pos, vec4(0, 1, 0, 5.5)));
     return t;
 }
@@ -115,13 +132,13 @@ void main()
     float x    = (float(pixel_coords.x * 2 - dims.x) / dims.x);
     float y    = (float(pixel_coords.y * 2 - dims.y) / dims.y);
 
-    vec3 camPos    = vec3(0, 0, 0);
-    vec3 camTarget = vec3(0, 0, 0);
+    vec3 eye    = vec3(xaxis, yaxis, zaxis);
+    vec3 center = vec3(0, 0, 0);
 
-    vec2 uv     = vec2(x, y);
-    vec3 rayDir = getCameraRayDir(uv, camPos, camTarget);
+    vec2 uv  = vec2(x, y);
+    vec4 dir = lookAtRH(uv, eye, center);
 
-    pixel = vec4(render(camPos, rayDir), 1.0);
+    pixel = vec4(render(eye, dir.xyz), 1.0);
 
     imageStore(img_output, pixel_coords, pixel);
 }

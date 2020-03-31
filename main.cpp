@@ -13,7 +13,7 @@ const unsigned int SCREEN_HEIGHT = 1024;
 void processInput(GLFWwindow *window);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 
-float xaxis = 0.0, zaxis = -1.0;
+float xaxis = 0.0, yaxis = 0.0, zaxis = -1.0;
 float lastX = SCREEN_WIDTH / 2.0;
 float lastY = SCREEN_HEIGHT / 2.0;
 MouseInput mouse;
@@ -117,10 +117,11 @@ int main(void)
         setFloat(marching, "iTime", (float)glfwGetTime());
         setFloat(marching, "zaxis", zaxis);
         setFloat(marching, "xaxis", xaxis);
+        setFloat(marching, "yaxis", yaxis);
         setVec3(marching, "mouse", mouse.MouseLookAt());
 
-        std::cout << "Pitch:\t" << mouse.getPitch() << std::endl;
-        std::cout << "Yaw:\t" << mouse.getYaw() << std::endl;
+        // std::cout << "Pitch:\t" << mouse.getPitch() << std::endl;
+        // std::cout << "Yaw:\t" << mouse.getYaw() << std::endl;
 
         // Number of groups in dispach: X, Y, Z
         glDispatchCompute(SCREEN_WIDTH / 32, SCREEN_HEIGHT / 32, 1);
@@ -167,21 +168,30 @@ void processInput(GLFWwindow *window)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        zaxis += 0.1;
-
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
         zaxis -= 0.1;
 
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        zaxis += 0.1;
+
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        xaxis += 0.1;
+        xaxis -= 0.1;
 
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        xaxis -= 0.1;
+        xaxis += 0.1;
+
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+        yaxis += 0.1;
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+        yaxis -= 0.1;
+        if (yaxis <= 0.0)
+            yaxis = 0.0;
+    }
 }
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos)
 {
-    float xoffset = xpos - lastX;
+    float xoffset = lastX - xpos;
     float yoffset = lastY - ypos;
     lastX         = xpos;
     lastY         = ypos;
