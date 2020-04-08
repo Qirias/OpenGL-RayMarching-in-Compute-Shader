@@ -5,7 +5,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
-float MouseSensitivity = 0.1;
+float MouseSensitivity = 0.001;
 
 class MouseInput {
   private:
@@ -18,7 +18,7 @@ class MouseInput {
 
     float getPitch() const { return pitch; }
     float getYaw() const { return yaw; }
-    void setPirch(const float pitch) { this->pitch = pitch; }
+    void setPitch(const float pitch) { this->pitch = pitch; }
     void setYaw(const float yaw) { this->yaw = yaw; }
 
     void ProcessMouseOffset(float xoffset, float yoffset)
@@ -29,11 +29,11 @@ class MouseInput {
         yaw += xoffset;
         pitch += yoffset;
 
-        if (pitch > 89.0)
-            pitch = 89.0;
+        // if (pitch > 89.0)
+        //     pitch = 89.0;
 
-        if (pitch < -89.0)
-            pitch = -89.0;
+        // if (pitch < -89.0)
+        //     pitch = -89.0;
     }
 
     glm::vec3 MouseLookAt()
