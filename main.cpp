@@ -104,7 +104,7 @@ int main(void)
     unsigned int quad         = CreateShader(basic.VertexShader, basic.FragmentShader);
 
     // Compute Shader
-    const std::string &compShader = ParseCompute("includes/marchinghader.glsl");
+    const std::string &compShader = ParseCompute("includes/computeShader.glsl");
     unsigned int marching         = CreateCompute(compShader);
 
     double lastTime      = 0.0;
@@ -114,27 +114,6 @@ int main(void)
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
-        glm::mat4 projection = glm::perspective(60.0, (double)SCREEN_WIDTH / (double)SCREEN_HEIGHT, 1.0, 2.0);
-        glm::vec3 camPos     = glm::vec3(3.0, 2.0, 7.0);
-        glm::mat4 view       = glm::lookAt(camPos, glm::vec3(0.0, 0.5, 0.0), glm::vec3(0.0, 1.0, 0.0));
-        glm::mat4 inv        = glm::transpose(glm::inverse(projection * view));
-
-        glm::vec4 ray00 = glm::vec4(-1, -1, 0, 1) * inv;
-        ray00 /= ray00.w;
-        ray00 -= glm::vec4(camPos, 1.0);
-
-        glm::vec4 ray10 = glm::vec4(1, -1, 0, 1) * inv;
-        ray10 /= ray10.w;
-        ray10 -= glm::vec4(camPos, 1.0);
-
-        glm::vec4 ray01 = glm::vec4(-1, 1, 0, 1) * inv;
-        ray01 /= ray01.w;
-        ray01 -= glm::vec4(camPos, 1.0);
-
-        glm::vec4 ray11 = glm::vec4(1, 1, 0, 1) * inv;
-        ray11 /= ray11.w;
-        ray11 -= glm::vec4(camPos, 1.0);
-
         useShader(marching);
         setFloat(marching, "iTime", (float)glfwGetTime());
         setFloat(marching, "zaxis", zaxis);
@@ -142,21 +121,6 @@ int main(void)
         setFloat(marching, "yaxis", yaxis);
         setVec3(marching, "mouse", mouse.MouseLookAt());
         setVec2(marching, "iMouse", glm::vec2(mouse.getYaw(), mouse.getPitch()));
-
-        unsigned int ray00Id = glGetUniformLocation(marching, "ray00");
-        glUniform3f(ray00Id, ray00.x, ray00.y, ray00.z);
-
-        unsigned int ray01Id = glGetUniformLocation(marching, "ray01");
-        glUniform3f(ray01Id, ray01.x, ray01.y, ray01.z);
-
-        unsigned int ray10Id = glGetUniformLocation(marching, "ray10");
-        glUniform3f(ray10Id, ray10.x, ray10.y, ray10.z);
-
-        unsigned int ray11Id = glGetUniformLocation(marching, "ray11");
-        glUniform3f(ray11Id, ray11.x, ray11.y, ray11.z);
-
-        unsigned int camId = glGetUniformLocation(marching, "eye");
-        glUniform3f(camId, camPos.x, camPos.y, camPos.z);
 
         // Number of work groups in dispach: X, Y, Z
         glDispatchCompute(SCREEN_WIDTH / 32, SCREEN_HEIGHT / 32, 1);

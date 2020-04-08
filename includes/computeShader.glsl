@@ -22,11 +22,6 @@ vec4 quatRotor(vec3 axis, float phi);
 vec3 quatRotate(vec3 point, vec4 rotor);
 
 uniform float iTime, xaxis, zaxis, yaxis;
-uniform vec3 eye;
-uniform vec3 ray00;
-uniform vec3 ray01;
-uniform vec3 ray10;
-uniform vec3 ray11;
 // Calculated Euler Angles
 uniform vec3 mouse;
 // Carries the current pixel location of the mouse cursor
@@ -165,19 +160,14 @@ void main()
     float x    = (float(pixel_coords.x * 2 - dims.x) / dims.x);
     float y    = (float(pixel_coords.y * 2 - dims.y) / dims.y);
 
-    vec4 rotor = quatRotor(vec3(0., -1., 0.), -iMouse.x);
-    rotor      = quatMult(rotor, quatRotor(vec3(1., 0., 0.), iMouse.y));
-
     vec3 eye    = vec3(key);
     vec3 center = vec3(0, 0, 0);
 
     vec2 uv = vec2(x, y);
 
-    vec3 dir = mix(mix(ray00, ray01, uv.y), mix(ray10, ray11, uv.y), uv.x);
-    // vec4 dir = lookAtRH(uv, eye, center);
-    dir = quatRotate(dir, rotor);
+    vec4 dir = lookAtRH(uv, eye, center);
 
-    pixel = vec4(render(eye, dir), 1.0);
+    pixel = vec4(render(eye, dir.xyz), 1.0);
 
     imageStore(img_output, pixel_coords, pixel);
 }
