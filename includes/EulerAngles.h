@@ -29,11 +29,11 @@ class MouseInput {
         yaw += xoffset;
         pitch += yoffset;
 
-        // if (pitch > 89.0)
-        //     pitch = 89.0;
+        if (pitch > 89.0)
+            pitch = 89.0;
 
-        // if (pitch < -89.0)
-        //     pitch = -89.0;
+        if (pitch < -89.0)
+            pitch = -89.0;
     }
 
     glm::vec3 MouseLookAt()

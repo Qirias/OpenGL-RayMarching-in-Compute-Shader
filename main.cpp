@@ -1,5 +1,6 @@
 #define GL_GLEXT_PROTOTYPES
 #include "includes/EulerAngles.h"
+#include "includes/camera.h"
 #include "includes/glm/glm.hpp"
 #include "includes/glm/gtc/matrix_transform.hpp"
 #include "includes/glm/gtc/type_ptr.hpp"
@@ -13,11 +14,20 @@ const unsigned int SCREEN_HEIGHT = 1024;
 void processInput(GLFWwindow *window);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 
-float xaxis = 0.0, yaxis = 0.0, zaxis = -1.0;
+bool zaxisPos   = false;
+bool zaxisNeg   = false;
+bool xaxisPos   = false;
+bool xaxisNeg   = false;
+float halfSpeed = false;
+
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+
 float lastX     = SCREEN_WIDTH / 2.0;
 float lastY     = SCREEN_HEIGHT / 2.0;
 bool firstMouse = true;
 MouseInput mouse;
+Camera camera(SCREEN_WIDTH, SCREEN_HEIGHT, 0.025, 10.0, glm::vec4(0, 0, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
 
 int main(void)
 {
@@ -112,13 +122,19 @@ int main(void)
 
     // Game loop
     while (!glfwWindowShouldClose(window)) {
+        float currentFrame = glfwGetTime();
+        deltaTime          = currentFrame - lastFrame;
+        lastFrame          = currentFrame;
+
         processInput(window);
 
         useShader(marching);
         setFloat(marching, "iTime", (float)glfwGetTime());
-        setFloat(marching, "zaxis", zaxis);
-        setFloat(marching, "xaxis", xaxis);
-        setFloat(marching, "yaxis", yaxis);
+
+        setVec4(marching, "camera.pos", camera.cameraPos.x, camera.cameraPos.y, camera.cameraPos.z, 0.0);
+        setVec4(marching, "camera.dir", camera.forward.x, camera.forward.y, camera.forward.z, 0.0);
+        setVec4(marching, "camera.yAxis", camera.up.x, camera.up.y, camera.up.z, 0.0);
+        setVec4(marching, "camera.xAxis", camera.right.x, camera.right.y, camera.right.z, 0.0);
         setVec3(marching, "mouse", mouse.MouseLookAt());
         setVec2(marching, "iMouse", glm::vec2(mouse.getYaw(), mouse.getPitch()));
 
@@ -167,25 +183,40 @@ void processInput(GLFWwindow *window)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        zaxis -= 0.1;
+        zaxisNeg = true;
+    else {
+        zaxisNeg = false;
+    }
 
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        zaxis += 0.1;
-
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        xaxis -= 0.1;
+        zaxisPos = true;
+    else {
+        zaxisPos = false;
+    }
 
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        xaxis += 0.1;
-
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-        yaxis += 0.1;
-
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-        yaxis -= 0.1;
-        if (yaxis <= 0.0)
-            yaxis = 0.0;
+        xaxisPos = true;
+    else {
+        xaxisPos = false;
     }
+
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        xaxisNeg = true;
+    else {
+        xaxisNeg = false;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        halfSpeed = true;
+    }
+    else {
+        halfSpeed = false;
+    }
+
+    camera.lookAt(zaxisNeg, zaxisPos, xaxisNeg, xaxisPos, halfSpeed, deltaTime);
 }
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos)
@@ -202,5 +233,6 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos)
     lastY         = ypos;
 
     mouse.ProcessMouseOffset(xoffset, yoffset);
+    camera.setMouse(-xpos, -ypos);
 }
 // g++ main.cpp -lGL -lglfw && ./a.out
