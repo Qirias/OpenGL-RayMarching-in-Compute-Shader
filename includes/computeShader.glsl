@@ -56,6 +56,7 @@ float sdf(vec3 pos)
 {
     float t = sdSphere(pos - (vec3(0.0, 0.0, -10.0)), 3.0);
     t       = opU(t, sdPlane(pos, vec4(0, 1, 0, 5.5)));
+    t       = opU(t, sdSphere(pos - (vec3(0.0, 0.0, 30.0)), 3.0));
     return t;
 }
 

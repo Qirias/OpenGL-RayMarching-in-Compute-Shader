@@ -68,21 +68,19 @@ class Camera {
         }
 
         if (zN) // W
-            cameraPos += (keyboardSpeed * (forward + right)) * deltaTime;
+            cameraPos += (keyboardSpeed * forward) * deltaTime;
         if (zP) // S
-            cameraPos += (keyboardSpeed * ((-forward) + right)) * deltaTime;
+            cameraPos += (keyboardSpeed * (-forward)) * deltaTime;
         if (xN) // A
-            cameraPos += (keyboardSpeed * (vec3(0) * forward + (-right))) * deltaTime;
+            cameraPos += (keyboardSpeed * (-right)) * deltaTime;
         if (xP) // D
-            cameraPos += (keyboardSpeed * (vec3(0) * forward + right)) * deltaTime;
+            cameraPos += (keyboardSpeed * right) * deltaTime;
 
         if (zP && xP) // S D
             cameraPos += (keyboardSpeed * ((-forward) + right)) * deltaTime;
         if (zN && xN) // W A
-            cameraPos += ((keyboardSpeed) * (forward + (-right))) * deltaTime;
+            cameraPos += (keyboardSpeed * (forward + (-right))) * deltaTime;
         if (xN && zP) // A S
-            cameraPos += ((keyboardSpeed) * ((-forward) + (-right))) * deltaTime;
-        if (xN && xP) // A D
-            cameraPos = cameraPos * vec3(0.0);
+            cameraPos += (keyboardSpeed * ((-forward) + (-right))) * deltaTime;
     }
 };

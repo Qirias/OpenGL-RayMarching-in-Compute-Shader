@@ -27,7 +27,7 @@ float lastX     = SCREEN_WIDTH / 2.0;
 float lastY     = SCREEN_HEIGHT / 2.0;
 bool firstMouse = true;
 MouseInput mouse;
-Camera camera(SCREEN_WIDTH, SCREEN_HEIGHT, 0.025, 10.0, glm::vec4(0, 0, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
+Camera camera(SCREEN_WIDTH, SCREEN_HEIGHT, 0.025, 10.0, glm::vec3(0, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
 
 int main(void)
 {
