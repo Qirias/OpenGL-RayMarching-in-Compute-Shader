@@ -1,6 +1,6 @@
 #version 430
-#define MAX_STEPS 256
-#define MIN_DIST .0001
+#define MAX_STEPS 512
+#define MIN_DIST .00001
 #define M_PI 3.1415926
 
 const int TILE_W      = 32;
@@ -16,6 +16,18 @@ struct Camera {
     vec4 xAxis;
 };
 
+struct Light {
+    vec3 position;
+
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+
+    float constant;
+    float linear;
+    float quadratic;
+};
+
 struct Ray {
     vec3 origin;
     vec3 dir;
@@ -27,9 +39,8 @@ float RayMarch(vec3 rayOrigin, vec3 rayDir);
 vec3 render(vec3 rayOrigin, vec3 rayDir);
 vec3 sphereNormal(vec3 pos);
 float sdPlane(vec3 p, vec4 n);
-Ray castRay(vec2 uv);
+vec3 getPointLight(vec3 color, vec3 normal, vec3 pos);
 
-// Time since glfw was initialized
 uniform float iTime;
 // Calculated Euler Angles
 uniform vec3 mouse;
@@ -37,6 +48,7 @@ uniform vec3 mouse;
 uniform vec2 iMouse;
 // Camera rotation and movement values
 uniform Camera camera;
+uniform Light light;
 
 Ray castRay(vec2 uv)
 {
@@ -56,7 +68,7 @@ float sdf(vec3 pos)
 {
     float t = sdSphere(pos - (vec3(0.0, 0.0, -10.0)), 3.0);
     t       = opU(t, sdPlane(pos, vec4(0, 1, 0, 5.5)));
-    t       = opU(t, sdSphere(pos - (vec3(0.0, 0.0, 30.0)), 3.0));
+    t       = opU(t, sdSphere(pos - (vec3(0.0, 0.0, 20.0)), 3.0));
     return t;
 }
 
@@ -78,31 +90,50 @@ float RayMarch(vec3 rayOrigin, vec3 rayDir)
 vec3 render(vec3 rayOrigin, vec3 rayDir)
 {
     float t = RayMarch(rayOrigin, rayDir);
-    vec3 col;
-    vec3 L = normalize(vec3(1.0, 2.0, 1.0)); // normalize(vec3(sin(iTime), 2.0, cos(iTime)));
+    vec3 color;
 
     if (t == -1.0) {
-        col = vec3(0.30, 0.36, 0.60) - (rayDir.y * 0.7);
+        color = vec3(0.30, 0.36, 0.60) - (rayDir.y * 0.7);
     }
     else {
-        vec3 pos = rayOrigin + rayDir * t;
-        vec3 N   = sphereNormal(pos);
-        col      = N * vec3(0.5) + vec3(0.5);
+        vec3 pos      = rayOrigin + rayDir * t;
+        vec3 normal   = sphereNormal(pos);
+        color         = normal * vec3(0.5) + vec3(0.5);
+        color         = getPointLight(color, normal, pos);
 
-        float NoL         = max(dot(N, L), 0.0);
-        vec3 LDirectional = vec3(0.9, 0.9, 0.8) * NoL;
-        vec3 LAmbient     = vec3(0.03, 0.04, 0.1);
-        vec3 diffuse      = col * (LDirectional + LAmbient);
-        col               = diffuse;
-
-        float d = RayMarch(pos + N * .01, L);
+        float d = RayMarch(pos + normal * .02, light.position - pos);
         if (d != -1) {
-            col = vec3(col * 0.1);
+            color = vec3(color * 0.4);
         }
     }
     // Gamma Correction
-    col = pow(col, vec3(0.4545));
-    return col;
+    color = pow(color, vec3(0.4545));
+    return color;
+}
+
+vec3 getPointLight(vec3 color, vec3 normal, vec3 pos)
+{
+    vec3 ambient = light.ambient;
+    vec3 viewDir = normalize(pos - camera.pos.xyz);
+
+    vec3 lightDir     = normalize(light.position - pos);
+    float NtoL_vector = max(dot(normal, lightDir), 0.0);
+    vec3 diffuse      = light.diffuse * NtoL_vector;
+    
+    vec3 reflectDir = reflect(lightDir, normal);
+    float spec      = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+
+    vec3 specular = light.specular * spec;
+    
+    float distance    = length(light.position - pos);
+    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance)); 
+    
+    diffuse  *= attenuation;
+    ambient  *= attenuation;
+    specular *= attenuation;
+
+    vec3 final    = color * (diffuse + ambient + specular);
+    return final;
 }
 
 vec3 sphereNormal(vec3 pos)

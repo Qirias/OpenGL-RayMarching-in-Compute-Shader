@@ -135,6 +135,15 @@ int main(void)
         setVec4(marching, "camera.dir", camera.forward.x, camera.forward.y, camera.forward.z, 0.0);
         setVec4(marching, "camera.yAxis", camera.up.x, camera.up.y, camera.up.z, 0.0);
         setVec4(marching, "camera.xAxis", camera.right.x, camera.right.y, camera.right.z, 0.0);
+
+        setVec3(marching, "light.position", glm::vec3(-5, 5, -10)/*glm::normalize(glm::vec3(sin(glfwGetTime()), 2.0, cos(glfwGetTime())))*/);
+        setVec3(marching, "light.ambient", glm::vec3(0.03, 0.04, 0.1));
+        setVec3(marching, "light.diffuse", glm::vec3(0.8, 0.8, 0.8));
+        setVec3(marching, "light.specular", glm::vec3(0.5, 0.5, 0.5));
+        setFloat(marching, "light.constant", 1.0);
+        setFloat(marching, "light.linear", 0.0009);
+        setFloat(marching, "light.quadratic", 0.0032);
+
         setVec3(marching, "mouse", mouse.MouseLookAt());
         setVec2(marching, "iMouse", glm::vec2(mouse.getYaw(), mouse.getPitch()));
 
