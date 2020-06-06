@@ -19,7 +19,6 @@ class Camera {
     float keyboardSpeed;
     float xpos;
     float ypos;
-    bool firstEntry = true;
 
     vec3 cameraPos;
     vec3 forward;
@@ -62,10 +61,11 @@ class Camera {
         up      = glm::normalize(vec3(rotationMatrix * vec4(0.0, 1.0, 0.0, 0.0)));
         right   = glm::normalize(glm::cross(forward, up));
 
-        if (halfSpeed && firstEntry) {
-            keyboardSpeed /= 2.0;
-            firstEntry = false;
+        if (halfSpeed) {
+            keyboardSpeed = 5.0;
         }
+        else
+            keyboardSpeed = 10.0;
 
         if (zN) // W
             cameraPos += (keyboardSpeed * forward) * deltaTime;

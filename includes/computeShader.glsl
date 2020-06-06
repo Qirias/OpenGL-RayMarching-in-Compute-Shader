@@ -2,6 +2,7 @@
 #define MAX_STEPS 512
 #define MIN_DIST .00001
 #define M_PI 3.1415926
+#define SHADOW_FALLOFF 0.05
 
 const int TILE_W      = 32;
 const int TILE_H      = 32;
@@ -49,6 +50,11 @@ uniform vec2 iMouse;
 // Camera rotation and movement values
 uniform Camera camera;
 uniform Light light;
+
+float rand(vec2 co)
+{
+  return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
 
 Ray castRay(vec2 uv)
 {
@@ -101,10 +107,14 @@ vec3 render(vec3 rayOrigin, vec3 rayDir)
         color         = normal * vec3(0.5) + vec3(0.5);
         color         = getPointLight(color, normal, pos);
 
-        float d = RayMarch(pos + normal * .02, light.position - pos);
-        if (d != -1) {
-            color = vec3(color * 0.4);
-        }
+        float shadow = 0.0;
+        vec3 shadowRayOrigin = pos + normal * 0.02;
+        float r = rand(vec2(rayDir.xy)) * 2.0 - 1.0;
+        vec3 shadowRayDir = light.position - pos + vec3(1.0 * SHADOW_FALLOFF) * r;
+        float d = RayMarch(shadowRayOrigin, shadowRayDir);
+        if (d != -1.0)
+            shadow += 1.0;
+        color = mix(color, color * 0.2, shadow);
     }
     // Gamma Correction
     color = pow(color, vec3(0.4545));
