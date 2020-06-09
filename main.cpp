@@ -144,6 +144,7 @@ int main(void)
         setFloat(marching, "light.linear", 0.0009);
         setFloat(marching, "light.quadratic", 0.0000032);
 
+        setFloat(marching, "drand48", drand48());
         setVec3(marching, "mouse", mouse.MouseLookAt());
         setVec2(marching, "iMouse", glm::vec2(mouse.getYaw(), mouse.getPitch()));
 
