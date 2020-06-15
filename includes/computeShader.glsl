@@ -35,15 +35,23 @@ struct Ray {
     vec3 dir;
 };
 
+struct RayIntersection {
+    float hitpoint;
+    vec3 color;
+};
+
 
 float sdSphere(vec3 p, float r);
-vec4 sdf(vec3 pos);
-vec4 RayMarch(vec3 rayOrigin, vec3 rayDir);
+RayIntersection sdf(vec3 pos);
+RayIntersection RayMarch(vec3 rayOrigin, vec3 rayDir);
+RayIntersection reflectedRay(vec3 rayOrigin, vec3 rayDir);
 vec3 render(vec3 rayOrigin, vec3 rayDir);
-vec3 sphereNormal(vec3 pos);
+vec3 GetNormal(vec3 pos);
 float sdPlane(vec3 p, vec4 n);
 vec3 getPointLight(vec3 color, vec3 normal, vec3 pos);
+vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color);
 
+uniform int bounceVar; //number of bouncing rays
 uniform float drand48; // testing
 uniform float iTime; // Time since glfw was initialized
 uniform vec3 mouse; // Calculated Euler Angles
@@ -68,47 +76,85 @@ float sdSphere(vec3 p, float r) { return length(p) - r; }
 
 float sdPlane(vec3 p, vec4 n) { return dot(p, n.xyz) + n.w; }
 
-vec4 opU(vec4 d1, vec4 d2) { return (d1.x < d2.x) ? d1 : d2; }
+RayIntersection opU(RayIntersection d1, RayIntersection d2) { return (d1.hitpoint < d2.hitpoint) ? d1 : d2; }
 
-vec4 sdf(vec3 pos)
+RayIntersection sdf(vec3 pos)
 {
     // The last vec3 refers to the color of each object
-    vec4 t    = vec4(sdSphere(pos - (vec3(0.0, 0.0, -10.0)), 3.0), vec3(0.8824, 0.0, 1.0));
-    t         = opU(t, vec4(sdSphere(pos - (vec3(0.0, 0.0, 20.0)), 3.0),vec3(0.0, 0.2667, 1.0)));
-    t         = opU(t, vec4(sdPlane(pos, vec4(0, 1, 0, 5.5)), vec3(1.0, 1.0, 1.0)));
+    RayIntersection t;
+    t         = RayIntersection(sdSphere(pos - vec3(0.0, 0.0, -10.0), 3.0), vec3(0.8824, 0.0, 1.0));
+    t         = opU(t, RayIntersection(sdSphere(pos - vec3(-15.0, 0.0, -10.0), 3.0), vec3(0.0, 0.2667, 1.0)));
+    t         = opU(t, RayIntersection(sdPlane(pos, vec4(0, 1, 0, 5.5)), vec3(1.0, 1.0, 1.0)));
     return t;
 }
 
-vec4 RayMarch(vec3 rayOrigin, vec3 rayDir)
+RayIntersection RayMarch(vec3 rayOrigin, vec3 rayDir)
 {
-    vec4 t = vec4(0.0); // Stores current distance along ray
+    float t = 0.0; // Stores current distance along ray
     float tmax = 400;
+    RayIntersection dummy = {-1.0, vec3(0.0)};
 
     for (int i = 0; i < MAX_STEPS; i++) {
-        vec4 res = sdf(rayOrigin + rayDir * t.x);
-        if (res.x < (MIN_DIST * t.x)) {
-            return vec4(t.x, res.yzw); // res holds the color values
+        RayIntersection res = sdf(rayOrigin + rayDir * t);
+        if (res.hitpoint < (MIN_DIST * t)) {
+            return RayIntersection (t, res.color); 
         }
-        if (res.x > tmax)
-            return vec4(-1.0);
-        t.x += res.x;
+        if (res.hitpoint > tmax)
+            return dummy;
+        t += res.hitpoint;
     }
 
-    return vec4(-1.0);
+    return dummy;
+}
+
+RayIntersection reflectedRay(vec3 rayOrigin, vec3 rayDir)
+{
+    float t = 0.0; // Stores current distance along ray
+    float tmax = 200;
+    RayIntersection dummy = {-1.0, vec3(0.0)};
+
+    for (int i = 0; i < MAX_STEPS / 2; i++) {
+        RayIntersection res = sdf(rayOrigin + rayDir * t);
+        if (res.hitpoint < (MIN_DIST * t)) {
+            return RayIntersection (t, res.color); 
+        }
+        if (res.hitpoint > tmax)
+            return dummy;
+        t += res.hitpoint;
+    }
+
+    return dummy;
+}
+
+vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color)
+{
+    for (int i = 0; i < bounceVar; i++)
+    {
+        rayDir                  = reflect(rayDir, normal);
+        RayIntersection t       = reflectedRay(pos + normal * 0.001, rayDir);
+        pos                     = pos + rayDir * t.hitpoint;
+        normal                  = GetNormal(pos);
+        t.color                 = getPointLight(t.color, normal, pos);
+        color                   += t.color * itemCol;
+    }
+    
+    color /= bounceVar;
+    return color;
 }
 
 vec3 render(vec3 rayOrigin, vec3 rayDir)
 {
     vec3 color;
-    color = vec3(0.30, 0.36, 0.60) - (rayDir.y * 0.7);
+    color = vec3(0.30, 0.36, 0.60) - (rayDir.y * 0.2);
     vec3 normal = vec3(0.0,1.0,0.0);
-    vec4 t = RayMarch(rayOrigin, rayDir);
+    RayIntersection t = RayMarch(rayOrigin, rayDir);
     bool shadows = true;
 
-    if (t.x != -1.0) {
-            vec3 pos      = rayOrigin + rayDir * t.x;
-            normal        = sphereNormal(pos);
-            color         = t.yzw;//normal * vec3(0.5) + vec3(0.5);
+    if (t.hitpoint != -1.0) {
+            vec3 pos      = rayOrigin + rayDir * t.hitpoint;
+            normal        = GetNormal(pos);
+            vec3 itemCol  = t.color;
+            color         = t.color;//normal * vec3(0.5) + vec3(0.5);
             color         = getPointLight(color, normal, pos);
             shadows       = (normal == vec3(0.0,1.0,0.0));
         
@@ -118,14 +164,15 @@ vec3 render(vec3 rayOrigin, vec3 rayDir)
             vec3 shadowRayOrigin = pos + normal * 0.02;
             float r = rand(vec2(rayDir.xy)) * 2.0 - 1.0;
             vec3 shadowRayDir = light.position - pos + vec3(1.0 * SHADOW_FALLOFF) * r;
-            vec4 d = RayMarch(shadowRayOrigin, shadowRayDir);
-            if (d.x != -1.0)
+            RayIntersection d = RayMarch(shadowRayOrigin, shadowRayDir);
+            if (d.hitpoint != -1.0)
                 shadow += 1.0;
             color = mix(color, color * 0.2, shadow);
         }
-
-    // Gamma Correction
+        if (bounceVar > 0)
+            color = bounce(rayDir, pos, normal, itemCol, color);
     }
+    // Gamma Correction
     color = pow(color, vec3(0.4545));
     return color;
 }
@@ -155,15 +202,15 @@ vec3 getPointLight(vec3 color, vec3 normal, vec3 pos)
     return final;
 }
 
-vec3 sphereNormal(vec3 pos)
+vec3 GetNormal(vec3 pos)
 {
-    float c = sdf(pos).x;
+    float c = sdf(pos).hitpoint;
 
     vec2 eps_zero = vec2(0.001, 0.0);
     // clang-format off
-    return normalize(vec3(sdf(pos + eps_zero.xyy).x,
-                          sdf(pos + eps_zero.yxy).x,
-                          sdf(pos + eps_zero.yyx).x) - c);
+    return normalize(vec3(sdf(pos + eps_zero.xyy).hitpoint,
+                          sdf(pos + eps_zero.yxy).hitpoint,
+                          sdf(pos + eps_zero.yyx).hitpoint) - c);
     // clang-format on
 }
 

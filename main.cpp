@@ -9,16 +9,18 @@
 #include <iomanip>
 #include <iostream>
 
-const unsigned int SCREEN_WIDTH  = 1024;
-const unsigned int SCREEN_HEIGHT = 1024;
+const unsigned int SCREEN_WIDTH  = 1080;
+const unsigned int SCREEN_HEIGHT = 1080;
 void processInput(GLFWwindow *window);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 bool zaxisPos   = false;
 bool zaxisNeg   = false;
 bool xaxisPos   = false;
 bool xaxisNeg   = false;
 float halfSpeed = false;
+int bounce = 0;
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -48,6 +50,8 @@ int main(void)
     glfwMakeContextCurrent(window);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetKeyCallback(window, key_callback);
+
 
     // clang-format off
     float quadVertices[] = {
@@ -144,6 +148,7 @@ int main(void)
         setFloat(marching, "light.linear", 0.0009);
         setFloat(marching, "light.quadratic", 0.0000032);
 
+        setInt(marching, "bounceVar", bounce);
         setFloat(marching, "drand48", drand48());
         setVec3(marching, "mouse", mouse.MouseLookAt());
         setVec2(marching, "iMouse", glm::vec2(mouse.getYaw(), mouse.getPitch()));
@@ -227,6 +232,15 @@ void processInput(GLFWwindow *window)
     }
 
     camera.lookAt(zaxisNeg, zaxisPos, xaxisNeg, xaxisPos, halfSpeed, deltaTime);
+}
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_UP && action == GLFW_PRESS)
+        bounce += 1;
+    if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
+        if (bounce > 0)
+            bounce -= 1;
 }
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos)
