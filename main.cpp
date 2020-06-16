@@ -237,7 +237,8 @@ void processInput(GLFWwindow *window)
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_UP && action == GLFW_PRESS)
-        bounce += 1;
+        if (bounce < 8)
+            bounce += 1;
     if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
         if (bounce > 0)
             bounce -= 1;
