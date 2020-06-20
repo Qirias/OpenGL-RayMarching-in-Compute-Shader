@@ -52,6 +52,7 @@ float sdPlane(vec3 p, vec4 n);
 vec3 getPointLight(vec3 color, vec3 normal, vec3 pos);
 vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, float shadow, int object);
 float softshadow(vec3 ro, vec3 rd, float k);
+float checkers(vec3 p);
 
 uniform int bounceVar; //number of bouncing rays
 uniform float drand48; // testing
@@ -68,6 +69,11 @@ Ray castRay(vec2 uv)
 
     return Ray(camera.pos.xyz, dir.xyz);
 }
+// https://www.shadertoy.com/view/3df3DH
+float checkers(vec3 p)
+{
+    return int(1000.0+p.x)%2 != int(1000.0+p.z)%2 ? 1.0 : 0.2;
+}
 
 float sdSphere(vec3 p, float r) { return length(p) - r; }
 
@@ -77,11 +83,11 @@ RayIntersection opU(RayIntersection d1, RayIntersection d2) { return (d1.hitpoin
 
 RayIntersection sdf(vec3 pos)
 {
-    // The last vec3 refers to the color of each objectect
+    // The last vec3 refers to the color of each object
     RayIntersection t;
     t         = RayIntersection(sdSphere(pos - vec3(0.0, 0.0, -10.0), 3.0), vec3(0.8824, 0.0, 1.0), 0);
     t         = opU(t, RayIntersection(sdSphere(pos - vec3(-15.0, 0.0, -10.0), 3.0), vec3(0.0, 0.2667, 1.0), 1));
-    t         = opU(t, RayIntersection(sdPlane(pos, vec4(0, 1, 0, 5.5)), vec3(1.0, 1.0, 1.0), 2));
+    t         = opU(t, RayIntersection(sdPlane(pos, vec4(0, 1, 0, 5.5)), vec3(checkers(pos)), 2));
     return t;
 }
 
@@ -110,7 +116,7 @@ RayIntersection reflectedRay(vec3 rayOrigin, vec3 rayDir)
     float tmax = 200;
     RayIntersection dummy = {-1.0, vec3(0.0), -1};
 
-    for (int i = 0; i < MAX_STEPS / 2; i++) {
+    for (int i = 0; i < MAX_STEPS / 4; i++) {
         RayIntersection res = sdf(rayOrigin + rayDir * t);
         if (res.hitpoint < (MIN_DIST * t)) {
             return RayIntersection (t, res.color, res.object); 
@@ -132,12 +138,17 @@ vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, float 
         pos                     = pos + rayDir * t.hitpoint;
         normal                  = GetNormal(pos);
         t.color                 = getPointLight(t.color, normal, pos);
-        color                   += t.color * itemCol;
+        color                  += t.color * itemCol;
+        itemCol                 = t.color;
     }
-    
+
     if (object == 2)
+    {
         color *= shadow;
-    
+        color /= bounceVar;
+        return color;
+    }
+
     color /= bounceVar;
     return color;
 }
@@ -146,11 +157,11 @@ float softshadow(vec3 ro, vec3 rd, float k)
 {
     float res = 1.0;
     float t = 0.0;
-    for (int i = 0; i < MAX_STEPS / 8; i++)
+    for (int i = 0; i < 16; i++)
     {
         RayIntersection h = sdf(ro + rd * t);
         if(h.hitpoint < 0.001)
-            return 0.05;
+            return 0.1;
 
         res = min(res, k * h.hitpoint / t);
         t += h.hitpoint;
@@ -161,15 +172,13 @@ float softshadow(vec3 ro, vec3 rd, float k)
 
 vec3 render(vec3 rayOrigin, vec3 rayDir)
 {
-    vec3 color;
-    color = vec3(0.30, 0.36, 0.60) - (rayDir.y * 0.2);
-    vec3 normal = vec3(0.0,1.0,0.0);
+    vec3 color = vec3(0.30, 0.36, 0.60) - (rayDir.y * 0.2);
     RayIntersection t = RayMarch(rayOrigin, rayDir);
-    float shadow = 0.05;
+    float shadow = 0.1;
     
     if (t.hitpoint != -1.0) {
             vec3 pos      = rayOrigin + rayDir * t.hitpoint;
-            normal        = GetNormal(pos);
+            vec3 normal   = GetNormal(pos);
             vec3 itemCol  = t.color;
             color         = t.color;//normal * vec3(0.5) + vec3(0.5);
             color         = getPointLight(color, normal, pos);
@@ -179,7 +188,8 @@ vec3 render(vec3 rayOrigin, vec3 rayDir)
             vec3 shadowRayOrigin = pos + normal * 0.02;
             vec3 shadowRayDir = light.position - pos;
             shadow = softshadow(shadowRayOrigin, shadowRayDir, 0.8);
-            color *= shadow;
+            if (bounceVar == 0)
+                color *= shadow;
         }
 
         if (bounceVar > 0)
