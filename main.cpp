@@ -19,6 +19,7 @@ bool zaxisPos   = false;
 bool zaxisNeg   = false;
 bool xaxisPos   = false;
 bool xaxisNeg   = false;
+bool AA         = true;
 float halfSpeed = false;
 int bounce = 0;
 
@@ -148,6 +149,7 @@ int main(void)
         setFloat(marching, "light.linear", 0.0009);
         setFloat(marching, "light.quadratic", 0.0000032);
 
+        setBool(marching, "AA", AA);
         setInt(marching, "bounceVar", bounce);
         setFloat(marching, "drand48", drand48());
         setVec3(marching, "mouse", mouse.MouseLookAt());
@@ -242,6 +244,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
         if (bounce > 0)
             bounce -= 1;
+    if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
+        AA = !AA;
 }
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos)

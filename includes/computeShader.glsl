@@ -38,7 +38,8 @@ struct Ray {
 struct RayIntersection {
     float hitpoint;
     vec3 color;
-    int object;
+    int id;
+    float reflectivity;
 };
 
 
@@ -50,10 +51,11 @@ vec3 render(vec3 rayOrigin, vec3 rayDir);
 vec3 GetNormal(vec3 pos);
 float sdPlane(vec3 p, vec4 n);
 vec3 getPointLight(vec3 color, vec3 normal, vec3 pos);
-vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, float shadow, int object);
+vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, float shadow, RayIntersection primaryObject, bool isInShadow);
 float softshadow(vec3 ro, vec3 rd, float k);
 float checkers(vec3 p);
 
+uniform bool AA;
 uniform int bounceVar; //number of bouncing rays
 uniform float drand48; // testing
 uniform float iTime; // Time since glfw was initialized
@@ -79,15 +81,21 @@ float sdSphere(vec3 p, float r) { return length(p) - r; }
 
 float sdPlane(vec3 p, vec4 n) { return dot(p, n.xyz) + n.w; }
 
+float sdBox(vec3 p, vec3 size)
+{
+    vec3 d = abs(p) - size;
+    return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
+}
+
 RayIntersection opU(RayIntersection d1, RayIntersection d2) { return (d1.hitpoint < d2.hitpoint) ? d1 : d2; }
 
 RayIntersection sdf(vec3 pos)
 {
     // The last vec3 refers to the color of each object
     RayIntersection t;
-    t         = RayIntersection(sdSphere(pos - vec3(0.0, 0.0, -10.0), 3.0), vec3(0.8824, 0.0, 1.0), 0);
-    t         = opU(t, RayIntersection(sdSphere(pos - vec3(-15.0, 0.0, -10.0), 3.0), vec3(0.0, 0.2667, 1.0), 1));
-    t         = opU(t, RayIntersection(sdPlane(pos, vec4(0, 1, 0, 5.5)), vec3(checkers(pos)), 2));
+    t         = RayIntersection(sdSphere(pos - vec3(0.0, 0.0, -10.0), 3.0), vec3(0.8824, 0.0, 1.0), 0, 1.0);
+    t         = opU(t, RayIntersection(sdSphere(pos - vec3(-10.0, 0.0, -10.0), 3.0), vec3(0.0, 0.851, 1.0), 1, 1.0));
+    t         = opU(t, RayIntersection(sdPlane(pos, vec4(0, 1, 0, 5.5)), vec3(checkers(pos)), 2, 0.0));
     return t;
 }
 
@@ -95,12 +103,12 @@ RayIntersection RayMarch(vec3 rayOrigin, vec3 rayDir)
 {
     float t = 0.0; // Stores current distance along ray
     float tmax = 400;
-    RayIntersection dummy = {-1.0, vec3(0.0), -1};
+    RayIntersection dummy = {-1.0, vec3(0.0), -1, 1.0};
 
     for (int i = 0; i < MAX_STEPS; i++) {
         RayIntersection res = sdf(rayOrigin + rayDir * t);
         if (res.hitpoint < (MIN_DIST * t)) {
-            return RayIntersection (t, res.color, res.object); 
+            return RayIntersection (t, res.color, res.id, res.reflectivity); 
         }
         if (res.hitpoint > tmax)
             return dummy;
@@ -114,12 +122,12 @@ RayIntersection reflectedRay(vec3 rayOrigin, vec3 rayDir)
 {
     float t = 0.0; // Stores current distance along ray
     float tmax = 200;
-    RayIntersection dummy = {-1.0, vec3(0.0), -1};
+    RayIntersection dummy = {-1.0, vec3(0.0), -1, 1.0};
 
     for (int i = 0; i < MAX_STEPS / 4; i++) {
         RayIntersection res = sdf(rayOrigin + rayDir * t);
         if (res.hitpoint < (MIN_DIST * t)) {
-            return RayIntersection (t, res.color, res.object); 
+            return RayIntersection (t, res.color, res.id, res.reflectivity); 
         }
         if (res.hitpoint > tmax)
             return dummy;
@@ -129,27 +137,27 @@ RayIntersection reflectedRay(vec3 rayOrigin, vec3 rayDir)
     return dummy;
 }
 
-vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, float shadow, int object)
+vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, float shadow, RayIntersection primaryObject, bool isInShadow)
 {
-    for (int i = 0; i < bounceVar; i++)
+    RayIntersection prevObject = primaryObject;
+
+    for (int i = 1; i <= bounceVar; i++)
     {
         rayDir                  = reflect(rayDir, normal);
         RayIntersection t       = reflectedRay(pos + normal * 0.001, rayDir);
         pos                     = pos + rayDir * t.hitpoint;
         normal                  = GetNormal(pos);
         t.color                 = getPointLight(t.color, normal, pos);
-        color                  += t.color * itemCol;
+        
+        if (prevObject.reflectivity == 0.0)
+            continue;
+        else
+            color              += t.color * itemCol / i;
+
         itemCol                 = t.color;
+        prevObject              = t;
     }
-
-    if (object == 2)
-    {
-        color *= shadow;
-        color /= bounceVar;
-        return color;
-    }
-
-    color /= bounceVar;
+    
     return color;
 }
 
@@ -161,7 +169,7 @@ float softshadow(vec3 ro, vec3 rd, float k)
     {
         RayIntersection h = sdf(ro + rd * t);
         if(h.hitpoint < 0.001)
-            return 0.1;
+            return 0.05;
 
         res = min(res, k * h.hitpoint / t);
         t += h.hitpoint;
@@ -174,7 +182,7 @@ vec3 render(vec3 rayOrigin, vec3 rayDir)
 {
     vec3 color = vec3(0.30, 0.36, 0.60) - (rayDir.y * 0.2);
     RayIntersection t = RayMarch(rayOrigin, rayDir);
-    float shadow = 0.1;
+    float shadow = 1.0;
     
     if (t.hitpoint != -1.0) {
             vec3 pos      = rayOrigin + rayDir * t.hitpoint;
@@ -183,17 +191,17 @@ vec3 render(vec3 rayOrigin, vec3 rayDir)
             color         = t.color;//normal * vec3(0.5) + vec3(0.5);
             color         = getPointLight(color, normal, pos);
         
-        if (t.object == 2) // Everything bellow is applied only for the floor plane
+        if (t.id == 2) // Everything bellow is applied only for the floor plane
         {
             vec3 shadowRayOrigin = pos + normal * 0.02;
             vec3 shadowRayDir = light.position - pos;
             shadow = softshadow(shadowRayOrigin, shadowRayDir, 0.8);
-            if (bounceVar == 0)
-                color *= shadow;
+            color *= shadow;
         }
 
-        if (bounceVar > 0)
-            color = bounce(rayDir, pos, normal, itemCol, color, shadow, t.object);
+        bool isInShadow = (shadow != 1.0);
+        if (bounceVar > 0) 
+            color = bounce(rayDir, pos, normal, itemCol, color, shadow, t, isInShadow);
         
     }
     // Gamma Correction
@@ -255,23 +263,41 @@ void main()
 
     vec2 uv = vec2(x, y);
 
-    float AA = 2.0; // anti aliasing samples, the current is 4 rays
-    int cnt = 0;
-    for (float AAY = 0.0; AAY < AA; AAY++)
+    // 4xMSAA
+    // Anti aliasing on-off
+    if (AA)
     {
-        for (float AAX = 0.0; AAX < AA; AAX++)
-        {
-            Ray r = castRay(uv + vec2(AAX, AAY) / dims);
-            pixel = vec4(render(r.origin, r.dir), 1.0);
-            finalColor += pixel;
-            cnt++;
-        }
-    }
-    finalColor /= cnt;
+        uv.x += 0.25 / dims.x;
+        uv.y += 0.25 / dims.y;
+        Ray r = castRay(uv);
+        pixel = vec4(render(r.origin, r.dir), 1.0);
+        finalColor += pixel;
 
-    // ====Anti Aliasing off====
-    // Ray r = castRay(uv);
-    // pixel = vec4(render(r.origin, r.dir), 1.0);
+        uv.x += 0.75 / dims.x;
+        uv.y += 0.25 / dims.y;
+        r = castRay(uv);
+        pixel = vec4(render(r.origin, r.dir), 1.0);
+        finalColor += pixel;
+
+        uv.x += 0.25 / dims.x;
+        uv.y += 0.75 / dims.y;
+        r = castRay(uv);
+        pixel = vec4(render(r.origin, r.dir), 1.0);
+        finalColor += pixel;
+
+        uv.x += 0.75 / dims.x;
+        uv.y += 0.75 / dims.y;
+        r = castRay(uv);
+        pixel = vec4(render(r.origin, r.dir), 1.0);
+        finalColor += pixel;
+
+        finalColor /= 4;
+    }
+    else
+    {
+        Ray r = castRay(uv);
+        finalColor = vec4(render(r.origin, r.dir), 1.0);
+    }
 
     imageStore(img_output, pixel_coords, finalColor);
 }
