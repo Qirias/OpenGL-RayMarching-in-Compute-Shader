@@ -146,8 +146,8 @@ int main(void)
         setVec3(marching, "light.diffuse", glm::vec3(0.8, 0.8, 0.8));
         setVec3(marching, "light.specular", glm::vec3(0.5, 0.5, 0.5));
         setFloat(marching, "light.constant", 1.0);
-        setFloat(marching, "light.linear", 0.0009);
-        setFloat(marching, "light.quadratic", 0.0000032);
+        setFloat(marching, "light.linear", 0.009);
+        setFloat(marching, "light.quadratic", 0.00032);
 
         setBool(marching, "AA", AA);
         setInt(marching, "bounceVar", bounce);
@@ -239,7 +239,7 @@ void processInput(GLFWwindow *window)
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_UP && action == GLFW_PRESS)
-        if (bounce < 20)
+        if (bounce < 5)
             bounce += 1;
     if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
         if (bounce > 0)
