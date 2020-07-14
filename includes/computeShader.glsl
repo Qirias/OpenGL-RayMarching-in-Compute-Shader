@@ -53,7 +53,7 @@ vec3 render(vec3 rayOrigin, vec3 rayDir);
 vec3 GetNormal(vec3 pos);
 float sdPlane(vec3 p, vec4 n);
 vec3 getPointLight(vec3 color, vec3 normal, vec3 pos);
-vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, float shadow, RayIntersection primaryObject, bool isInShadow);
+vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, RayIntersection primaryObject);
 float softshadow(vec3 ro, vec3 rd, float k);
 float checkers(vec3 p);
 
@@ -160,7 +160,7 @@ RayIntersection reflectedRay(vec3 rayOrigin, vec3 rayDir)
     return dummy;
 }
 
-vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, float shadow, RayIntersection primaryObject, bool isInShadow)
+vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, RayIntersection primaryObject)
 {
     RayIntersection prevObject = primaryObject;
 
@@ -226,9 +226,8 @@ vec3 render(vec3 rayOrigin, vec3 rayDir)
             color *= shadow;
         }
 
-        bool isInShadow = (shadow != 1.0);
         if (bounceVar > 0) 
-            color = bounce(rayDir, pos, normal, itemCol, color, shadow, t, isInShadow);
+            color = bounce(rayDir, pos, normal, itemCol, color, t);
     
     }
     // Gamma Correction
