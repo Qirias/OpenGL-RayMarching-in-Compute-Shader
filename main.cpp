@@ -154,7 +154,7 @@ int main(void)
         setInt(marching, "bounceVar", bounce);
         setFloat(marching, "drand48", drand48());
         setVec3(marching, "mouse", mouse.MouseLookAt());
-        setVec2(marching, "iMouse", glm::vec2(mouse.getYaw(), mouse.getPitch()));
+        setVec2(marching, "iMouse", glm::vec2(mouse.yaw, mouse.pitch));
 
         // Number of work groups in dispach: X, Y, Z
         glDispatchCompute(SCREEN_WIDTH / 32, SCREEN_HEIGHT / 32, 1);

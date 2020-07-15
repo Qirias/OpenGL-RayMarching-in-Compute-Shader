@@ -41,7 +41,7 @@ struct RayHit {
     float hitpoint;
     vec3 color;
     int id;
-    float reflectivity;
+    float material;
 };
 
 
@@ -131,7 +131,7 @@ RayHit RayMarch(vec3 rayOrigin, vec3 rayDir)
     for (int i = 0; i < MAX_STEPS; i++) {
         RayHit res = sdf(rayOrigin + rayDir * t);
         if (res.hitpoint < (MIN_DIST * t)) {
-            return RayHit (t, res.color, res.id, res.reflectivity); 
+            return RayHit (t, res.color, res.id, res.material); 
         }
         if (res.hitpoint > tmax)
             return dummy;
@@ -150,7 +150,7 @@ RayHit reflectedRay(vec3 rayOrigin, vec3 rayDir)
     for (int i = 0; i < MAX_STEPS / 2; i++) {
         RayHit res = sdf(rayOrigin + rayDir * t);
         if (res.hitpoint < (MIN_DIST * t)) {
-            return RayHit (t, res.color, res.id, res.reflectivity); 
+            return RayHit (t, res.color, res.id, res.material); 
         }
         if (res.hitpoint > tmax)
             return dummy;
@@ -177,7 +177,7 @@ vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, RayHit
         else
             t.color             = getPointLight(t.color, normal, pos);
 
-        if (t.id == 7 && i < 3)
+        if (t.id == 7 && prevObject.material != MATTE && i < 3)
         {
             vec3 shadowRayOrigin = pos + normal * 0.02;
             vec3 shadowRayDir = light.position - pos;
@@ -185,7 +185,7 @@ vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, RayHit
             color *= shadow / i;
         }
         
-        if (prevObject.reflectivity == MATTE)
+        if (prevObject.material == MATTE)
             continue;
         else
             color              += t.color * itemCol / i;

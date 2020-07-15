@@ -8,18 +8,12 @@
 float MouseSensitivity = 0.001;
 
 class MouseInput {
-  private:
+  public:
     float pitch, yaw;
 
-  public:
     MouseInput() noexcept : pitch(0.0), yaw(0.0) {}
 
     MouseInput(const float newPitch, const float newYaw) noexcept : pitch(newPitch), yaw(newYaw) {}
-
-    float getPitch() const { return pitch; }
-    float getYaw() const { return yaw; }
-    void setPitch(const float pitch) { this->pitch = pitch; }
-    void setYaw(const float yaw) { this->yaw = yaw; }
 
     void ProcessMouseOffset(float xoffset, float yoffset)
     {
