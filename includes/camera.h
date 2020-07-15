@@ -75,12 +75,5 @@ class Camera {
             cameraPos += (keyboardSpeed * (-right)) * deltaTime;
         if (xP) // D
             cameraPos += (keyboardSpeed * right) * deltaTime;
-
-        if (zP && xP) // S D
-            cameraPos += (keyboardSpeed * ((-forward) + right)) * deltaTime;
-        if (zN && xN) // W A
-            cameraPos += (keyboardSpeed * (forward + (-right))) * deltaTime;
-        if (xN && zP) // A S
-            cameraPos += (keyboardSpeed * ((-forward) + (-right))) * deltaTime;
     }
 };

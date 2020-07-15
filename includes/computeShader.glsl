@@ -4,7 +4,7 @@
 #define M_PI 3.1415926
 #define SHADOW_FALLOFF 0.05
 #define REFLECTIVE 1.0
-#define MAT        0.0
+#define MATTE      0.0
 #extension GL_NV_compute_shader_derivatives : enable
 
 const int TILE_W      = 32;
@@ -37,7 +37,7 @@ struct Ray {
     vec3 dir;
 };
 
-struct RayIntersection {
+struct RayHit {
     float hitpoint;
     vec3 color;
     int id;
@@ -46,14 +46,14 @@ struct RayIntersection {
 
 
 float sdSphere(vec3 p, float r);
-RayIntersection sdf(vec3 pos);
-RayIntersection RayMarch(vec3 rayOrigin, vec3 rayDir);
-RayIntersection reflectedRay(vec3 rayOrigin, vec3 rayDir);
+RayHit sdf(vec3 pos);
+RayHit RayMarch(vec3 rayOrigin, vec3 rayDir);
+RayHit reflectedRay(vec3 rayOrigin, vec3 rayDir);
 vec3 render(vec3 rayOrigin, vec3 rayDir);
 vec3 GetNormal(vec3 pos);
 float sdPlane(vec3 p, vec4 n);
 vec3 getPointLight(vec3 color, vec3 normal, vec3 pos);
-vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, RayIntersection primaryObject);
+vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, RayHit primaryObject);
 float softshadow(vec3 ro, vec3 rd, float k);
 float checkers(vec3 p);
 
@@ -90,48 +90,48 @@ float sdBox(vec3 p, vec3 b)
     return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
 }
 
-float sdTorus( vec3 p, vec2 t )
+float sdTorus(vec3 p, vec2 t)
 {
     return length( vec2(length(p.xz)-t.x,p.y) )-t.y;
 }
 
-float sdCapsule( vec3 p, vec3 a, vec3 b, float r )
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r)
 {
 	vec3 pa = p-a, ba = b-a;
 	float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
 	return length( pa - ba*h ) - r;
 }
 
-RayIntersection opU(RayIntersection d1, RayIntersection d2) { return (d1.hitpoint < d2.hitpoint) ? d1 : d2; }
+RayHit opU(RayHit d1, RayHit d2) { return (d1.hitpoint < d2.hitpoint) ? d1 : d2; }
 
-RayIntersection sdf(vec3 pos)
+RayHit sdf(vec3 pos)
 {
     // The last vec3 refers to the color of each object
-    RayIntersection t;
-    t         = RayIntersection(sdSphere(pos - vec3(15.0, 0.0, -10.0), 3.0), vec3(0.8824, 0.0, 1.0), 0, REFLECTIVE);
-    t         = opU(t, RayIntersection(sdSphere(pos - vec3(-25.0, 0.0, -10.0), 3.0), vec3(0.0, 0.851, 1.0), 1, REFLECTIVE));
+    RayHit t;
+    t         = RayHit(sdSphere(pos - vec3(15.0, 0.0, -10.0), 3.0), vec3(0.1804, 0.6, 0.2157), 0, REFLECTIVE);
+    t         = opU(t, RayHit(sdSphere(pos - vec3(-25.0, 0.0, -10.0), 3.0), vec3(0.0, 0.851, 1.0), 1, REFLECTIVE));
 
     // Blended shapes
-    RayIntersection Box = RayIntersection(sdBox(pos - vec3(-5.0, 0.0, -10.0), vec3(3,2.5,2.5)), vec3(1.0, 1.0, 1.0), 2, REFLECTIVE);
-    RayIntersection Sphere = RayIntersection(sdSphere(pos - vec3(-5.0, 0.0, -10.0), 3.0), vec3(1.0, 1.0, 1.0), 3, REFLECTIVE);
-    t         = opU(t, RayIntersection(mix(Box.hitpoint, Sphere.hitpoint, (sin(iTime) / 2) + 0.5), vec3(0.4863, 0.3529, 0.702), 4, REFLECTIVE));
+    RayHit Box    = RayHit(sdBox(pos - vec3(-5.0, 0.0, -10.0), vec3(3,2.5,2.5)), vec3(1.0, 1.0, 1.0), 2, REFLECTIVE);
+    RayHit Sphere = RayHit(sdSphere(pos - vec3(-5.0, 0.0, -10.0), 3.0), vec3(1.0, 1.0, 1.0), 3, REFLECTIVE);
+    t         = opU(t, RayHit(mix(Box.hitpoint, Sphere.hitpoint, sin(iTime) / 2 + 0.5), vec3(0.4863, 0.3529, 0.702), 4, REFLECTIVE));
     
-    t         = opU(t, RayIntersection(sdTorus((pos-vec3(-5.0, 0.0, 10.0)).xzy, vec2(2.5, 0.5)), vec3(0.9137, 0.549, 0.0), 5, REFLECTIVE));
-    t         = opU(t, RayIntersection(sdCapsule(pos-vec3(-5.0, -2.0, -30.0), vec3(-0.1,0.1,-0.1), vec3(2.0,4.0,2.0), 1.0), vec3(0.8, 0.0902, 0.4824), 6, REFLECTIVE));
-    t         = opU(t, RayIntersection(sdPlane(pos, vec4(0, 1, 0, 5.5)), vec3(checkers(pos)), 7, MAT));
+    t         = opU(t, RayHit(sdTorus((pos-vec3(-5.0, 0.0, 10.0)).xzy, vec2(2.5, 0.5)), vec3(0.9137, 0.549, 0.0), 5, REFLECTIVE));
+    t         = opU(t, RayHit(sdCapsule(pos-vec3(-5.0, -2.0, -30.0), vec3(-0.1,0.1,-0.1), vec3(2.0,4.0,2.0), 1.0), vec3(0.8, 0.0902, 0.4824), 6, REFLECTIVE));
+    t         = opU(t, RayHit(sdPlane(pos, vec4(0, 1, 0, 5.5)), vec3(checkers(pos)), 7, MATTE));
     return t;
 }
 
-RayIntersection RayMarch(vec3 rayOrigin, vec3 rayDir)
+RayHit RayMarch(vec3 rayOrigin, vec3 rayDir)
 {
     float t = 0.0; // Stores current distance along ray
     float tmax = 400;
-    RayIntersection dummy = {-1.0, vec3(0.0), -1, 1.0};
+    RayHit dummy = {-1.0, vec3(0.0), -1, 1.0};
 
     for (int i = 0; i < MAX_STEPS; i++) {
-        RayIntersection res = sdf(rayOrigin + rayDir * t);
+        RayHit res = sdf(rayOrigin + rayDir * t);
         if (res.hitpoint < (MIN_DIST * t)) {
-            return RayIntersection (t, res.color, res.id, res.reflectivity); 
+            return RayHit (t, res.color, res.id, res.reflectivity); 
         }
         if (res.hitpoint > tmax)
             return dummy;
@@ -141,16 +141,16 @@ RayIntersection RayMarch(vec3 rayOrigin, vec3 rayDir)
     return dummy;
 }
 
-RayIntersection reflectedRay(vec3 rayOrigin, vec3 rayDir)
+RayHit reflectedRay(vec3 rayOrigin, vec3 rayDir)
 {
     float t = 0.0; // Stores current distance along ray
     float tmax = 200;
-    RayIntersection dummy = {-1.0, vec3(0.0), -1, 1.0};
+    RayHit dummy = {-1.0, vec3(0.0), -1, 1.0};
 
     for (int i = 0; i < MAX_STEPS / 2; i++) {
-        RayIntersection res = sdf(rayOrigin + rayDir * t);
+        RayHit res = sdf(rayOrigin + rayDir * t);
         if (res.hitpoint < (MIN_DIST * t)) {
-            return RayIntersection (t, res.color, res.id, res.reflectivity); 
+            return RayHit (t, res.color, res.id, res.reflectivity); 
         }
         if (res.hitpoint > tmax)
             return dummy;
@@ -160,22 +160,32 @@ RayIntersection reflectedRay(vec3 rayOrigin, vec3 rayDir)
     return dummy;
 }
 
-vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, RayIntersection primaryObject)
+vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, RayHit primaryObject)
 {
-    RayIntersection prevObject = primaryObject;
+    RayHit prevObject = primaryObject;
+    float shadow = 1.0;
 
     for (int i = 1; i <= bounceVar; i++)
     {
         rayDir                  = reflect(rayDir, normal);
-        RayIntersection t       = reflectedRay(pos + normal * 0.001, rayDir);
+        RayHit t                = reflectedRay(pos + normal * 0.001, rayDir);
         pos                     = pos + rayDir * t.hitpoint;
         normal                  = GetNormal(pos);
+        
         if (t.hitpoint == -1.0)
             t.color             = vec3(0.36,0.36,0.60) - (rayDir.y * 0.2);
         else
             t.color             = getPointLight(t.color, normal, pos);
+
+        if (t.id == 7 && i < 3)
+        {
+            vec3 shadowRayOrigin = pos + normal * 0.02;
+            vec3 shadowRayDir = light.position - pos;
+            shadow = softshadow(shadowRayOrigin, shadowRayDir, 2.0);
+            color *= shadow / i;
+        }
         
-        if (prevObject.reflectivity == MAT)
+        if (prevObject.reflectivity == MATTE)
             continue;
         else
             color              += t.color * itemCol / i;
@@ -193,7 +203,7 @@ float softshadow(vec3 ro, vec3 rd, float k)
     float t = 0.0;
     for (int i = 0; i < 16; i++)
     {
-        RayIntersection h = sdf(ro + rd * t);
+        RayHit h = sdf(ro + rd * t);
         if(h.hitpoint < 0.001)
             return 0.05;
 
@@ -207,7 +217,7 @@ float softshadow(vec3 ro, vec3 rd, float k)
 vec3 render(vec3 rayOrigin, vec3 rayDir)
 {
     vec3 color = vec3(0.30, 0.36, 0.60) - (rayDir.y * 0.2);
-    RayIntersection t = RayMarch(rayOrigin, rayDir);
+    RayHit t = RayMarch(rayOrigin, rayDir);
     float shadow = 1.0;
     
     if (t.hitpoint != -1.0) {
@@ -224,6 +234,8 @@ vec3 render(vec3 rayOrigin, vec3 rayDir)
             vec3 shadowRayDir = light.position - pos;
             shadow = softshadow(shadowRayOrigin, shadowRayDir, 2.0);
             color *= shadow;
+            color = pow(color, vec3(0.4545));
+            return color;
         }
 
         if (bounceVar > 0) 

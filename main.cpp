@@ -20,6 +20,7 @@ bool zaxisNeg   = false;
 bool xaxisPos   = false;
 bool xaxisNeg   = false;
 bool AA         = true;
+bool showQuad   = false;
 float halfSpeed = false;
 int bounce = 0;
 
@@ -193,12 +194,6 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) // Window close
         glfwSetWindowShouldClose(window, true);
 
-    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) // Lines of Triangles
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         zaxisNeg = true;
     else {
@@ -244,8 +239,18 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
         if (bounce > 0)
             bounce -= 1;
+
     if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
         AA = !AA;
+
+    if (key == GLFW_KEY_L && action == GLFW_PRESS)
+    {
+        if (showQuad)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        else
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        showQuad = !showQuad;
+    }
 }
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos)
