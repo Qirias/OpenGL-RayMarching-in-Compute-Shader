@@ -53,9 +53,9 @@ vec3 render(vec3 rayOrigin, vec3 rayDir);
 vec3 GetNormal(vec3 pos);
 float sdPlane(vec3 p, vec4 n);
 vec3 getPointLight(vec3 color, vec3 normal, vec3 pos);
-vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, RayHit primaryObject);
+vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 prevColor, vec3 color, RayHit primaryObject);
 float softshadow(vec3 ro, vec3 rd, float k);
-float checkers(vec3 p);
+vec3 checkers(vec3 p);
 
 uniform bool AA;
 uniform int bounceVar; //number of bouncing rays
@@ -75,9 +75,9 @@ Ray castRay(vec2 uv)
 }
 
 // https://www.shadertoy.com/view/3df3DH
-float checkers(vec3 p)
+vec3 checkers(vec3 p)
 {
-    return int(1000.0+p.x) % 2 != int(1000.0+p.z) % 2 ? 1.0 : 0.2;
+    return int(1000.0+p.x) % 2 != int(1000.0+p.z) % 2 ? vec3(1.0, 1.0, 1.0) : vec3(0.2, 0.2, 0.2);
 }
 
 float sdSphere(vec3 p, float r) { return length(p) - r; }
@@ -116,9 +116,9 @@ RayHit sdf(vec3 pos)
     RayHit Sphere = RayHit(sdSphere(pos - vec3(-5.0, 0.0, -10.0), 3.0), vec3(1.0, 1.0, 1.0), 3, REFLECTIVE);
     t         = opU(t, RayHit(mix(Box.hitpoint, Sphere.hitpoint, sin(iTime) / 2 + 0.5), vec3(0.4863, 0.3529, 0.702), 4, REFLECTIVE));
     
-    t         = opU(t, RayHit(sdTorus((pos-vec3(-5.0, 0.0, 10.0)).xzy, vec2(2.5, 0.5)), vec3(0.9137, 0.549, 0.0), 5, REFLECTIVE));
-    t         = opU(t, RayHit(sdCapsule(pos-vec3(-5.0, -2.0, -30.0), vec3(-0.1,0.1,-0.1), vec3(2.0,4.0,2.0), 1.0), vec3(0.8, 0.0902, 0.4824), 6, REFLECTIVE));
-    t         = opU(t, RayHit(sdPlane(pos, vec4(0, 1, 0, 5.5)), vec3(checkers(pos)), 7, MATTE));
+    t         = opU(t, RayHit(sdTorus((pos - vec3(-5.0, 0.0, 10.0)).xzy, vec2(2.5, 0.5)), vec3(0.9137, 0.549, 0.0), 5, REFLECTIVE));
+    t         = opU(t, RayHit(sdCapsule(pos - vec3(-5.0, -2.0, -30.0), vec3(-0.1,0.1,-0.1), vec3(2.0,4.0,2.0), 1.0), vec3(0.8, 0.0902, 0.4824), 6, REFLECTIVE));
+    t         = opU(t, RayHit(sdPlane(pos, vec4(0, 1, 0, 5.5)), checkers(pos), 7, MATTE));
     return t;
 }
 
@@ -160,7 +160,7 @@ RayHit reflectedRay(vec3 rayOrigin, vec3 rayDir)
     return dummy;
 }
 
-vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, RayHit primaryObject)
+vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 prevColor, vec3 color, RayHit primaryObject)
 {
     RayHit prevObject = primaryObject;
     float shadow = 1.0;
@@ -179,7 +179,7 @@ vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, RayHit
 
         if (t.id == 7 && prevObject.material != MATTE && i < 3)
         {
-            vec3 shadowRayOrigin = pos + normal * 0.02;
+            vec3 shadowRayOrigin = pos + normal * 0.01;
             vec3 shadowRayDir = light.position - pos;
             shadow = softshadow(shadowRayOrigin, shadowRayDir, 2.0);
             color *= shadow / i;
@@ -188,9 +188,9 @@ vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 itemCol, vec3 color, RayHit
         if (prevObject.material == MATTE)
             continue;
         else
-            color              += t.color * itemCol / i;
+            color              += t.color * prevColor / i;
 
-        itemCol                 = t.color;
+        prevColor               = t.color;
         prevObject              = t;
     }
     
@@ -222,44 +222,46 @@ vec3 render(vec3 rayOrigin, vec3 rayDir)
     
     if (t.hitpoint != -1.0) {
 
-        vec3 pos      = rayOrigin + rayDir * t.hitpoint;
-        vec3 normal   = GetNormal(pos);
-        vec3 itemCol  = t.color;
-        color         = t.color;//normal * vec3(0.5) + vec3(0.5);
-        color         = getPointLight(color, normal, pos);
+        vec3 pos         = rayOrigin + rayDir * t.hitpoint;
+        vec3 normal      = GetNormal(pos);
+        vec3 prevColor   = t.color;
+        color            = t.color;//normal * vec3(0.5) + vec3(0.5);
+        color            = getPointLight(color, normal, pos);
     
         if (t.id == 7) // Everything bellow is applied only for the floor plane
         {
             vec3 shadowRayOrigin = pos + normal * 0.02;
-            vec3 shadowRayDir = light.position - pos;
-            shadow = softshadow(shadowRayOrigin, shadowRayDir, 2.0);
-            color *= shadow;
-            color = pow(color, vec3(0.4545));
+            vec3 shadowRayDir    = light.position - pos;
+            shadow               = softshadow(shadowRayOrigin, shadowRayDir, 2.0);
+            color               *= shadow;
+            color                = pow(color, vec3(0.4545));
             return color;
         }
 
         if (bounceVar > 0) 
-            color = bounce(rayDir, pos, normal, itemCol, color, t);
+            color = bounce(rayDir, pos, normal, prevColor, color, t);
     
     }
     // Gamma Correction
     color = pow(color, vec3(0.4545));
+    // Visualize depth
+    // color = vec3(1.0-t.hitpoint*0.075);
     return color;
 }
 
 vec3 getPointLight(vec3 color, vec3 normal, vec3 pos)
 {
-    vec3 ambient = light.ambient;
-    vec3 viewDir = normalize(pos - camera.pos.xyz);
+    vec3 ambient      = light.ambient;
+    vec3 viewDir      = normalize(pos - camera.pos.xyz);
 
     vec3 lightDir     = normalize(light.position - pos);
     float NtoL_vector = max(dot(normal, lightDir), 0.0);
     vec3 diffuse      = light.diffuse * NtoL_vector;
     
-    vec3 reflectDir = reflect(lightDir, normal);
-    float spec      = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+    vec3 reflectDir   = reflect(lightDir, normal);
+    float spec        = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
 
-    vec3 specular = light.specular * spec;
+    vec3 specular     = light.specular * spec;
     
     float distance    = length(light.position - pos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance)); 
@@ -268,7 +270,7 @@ vec3 getPointLight(vec3 color, vec3 normal, vec3 pos)
     ambient  *= attenuation;
     specular *= attenuation;
 
-    vec3 final    = color * (diffuse + ambient + specular);
+    vec3 final = color * (diffuse + ambient + specular);
     return final;
 }
 

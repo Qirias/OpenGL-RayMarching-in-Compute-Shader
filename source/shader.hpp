@@ -1,8 +1,8 @@
 #pragma once
 #define GL_GLEXT_PROTOTYPES
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
+#include "../includes/glm/glm.hpp"
+#include "../includes/glm/gtc/matrix_transform.hpp"
+#include "../includes/glm/gtc/type_ptr.hpp"
 #include <GLFW/glfw3.h>
 #include <fstream>
 #include <iostream>
@@ -114,7 +114,7 @@ static unsigned int CompileShader(unsigned int type, const std::string &source)
     if (result == GL_FALSE) {
         int length;
         glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
-        char message[ 512 ]; // = (char*) alloca(length * sizeof(char));
+        char message[ 512 ];
         glGetShaderInfoLog(id, length, &length, message);
         std::cout << "Failed to compile" << (type == GL_VERTEX_SHADER ? " vertex" : " fragment") << " shader!"
                   << std::endl;
@@ -168,7 +168,7 @@ static unsigned int CompileCompute(unsigned int type, const std::string &source)
     if (result == GL_FALSE) {
         int length;
         glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
-        char message[ 512 ]; // = (char*) alloca(length * sizeof(char));
+        char message[ 512 ];
         glGetShaderInfoLog(id, length, &length, message);
         std::cout << "Failed to compile compute shader!" << std::endl;
         std::cout << message << std::endl;
