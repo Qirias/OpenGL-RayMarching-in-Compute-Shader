@@ -1,11 +1,8 @@
 #version 450
 #define MAX_STEPS 512
 #define MIN_DIST .000001
-#define M_PI 3.1415926
-#define SHADOW_FALLOFF 0.05
 #define REFLECTIVE 1.0
 #define MATTE      0.0
-#extension GL_NV_compute_shader_derivatives : enable
 
 const int TILE_W      = 32;
 const int TILE_H      = 32;
@@ -44,7 +41,7 @@ struct RayHit {
     float material;
 };
 
-
+// SDFs and Soft shadows by Inigo quilez https://www.iquilezles.org/www/index.htm
 float sdSphere(vec3 p, float r);
 RayHit sdf(vec3 pos);
 RayHit RayMarch(vec3 rayOrigin, vec3 rayDir);
@@ -52,7 +49,7 @@ RayHit reflectedRay(vec3 rayOrigin, vec3 rayDir);
 vec3 render(vec3 rayOrigin, vec3 rayDir);
 vec3 GetNormal(vec3 pos);
 float sdPlane(vec3 p, vec4 n);
-vec3 getPointLight(vec3 color, vec3 normal, vec3 pos);
+vec3 getPointLight(vec3 color, vec3 normal, vec3 pos); // https://learnopengl.com/Lighting/Light-casters
 vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 prevColor, vec3 color, RayHit primaryObject);
 float softshadow(vec3 ro, vec3 rd, float k);
 vec3 checkers(vec3 p);
@@ -77,8 +74,9 @@ Ray castRay(vec2 uv)
 // https://www.shadertoy.com/view/3df3DH
 vec3 checkers(vec3 p)
 {
-    return int(1000.0+p.x) % 2 != int(1000.0+p.z) % 2 ? vec3(1.0, 1.0, 1.0) : vec3(0.2, 0.2, 0.2);
+    return int(1000.0+p.x) % 2 != int(1000.0+p.z) % 2 ? vec3(1.0) /*vec3(mouse) * 10*/ : vec3(0.2);
 }
+
 
 float sdSphere(vec3 p, float r) { return length(p) - r; }
 
@@ -179,7 +177,7 @@ vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 prevColor, vec3 color, RayH
 
         if (t.id == 7 && prevObject.material != MATTE && i < 3)
         {
-            vec3 shadowRayOrigin = pos + normal * 0.01;
+            vec3 shadowRayOrigin = pos + normal * 0.02;
             vec3 shadowRayDir = light.position - pos;
             shadow = softshadow(shadowRayOrigin, shadowRayDir, 2.0);
             color *= shadow / i;
