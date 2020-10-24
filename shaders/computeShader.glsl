@@ -4,10 +4,12 @@
 #define REFLECTIVE 1.0
 #define MATTE      0.0
 
-const int TILE_W      = 32;
-const int TILE_H      = 32;
+uniform uint workgroups;
+
+const uint TILE_W      = workgroups;
+const uint TILE_H      = workgroups;
 const ivec2 TILE_SIZE = ivec2(TILE_W, TILE_H);
-layout(local_size_x = 32, local_size_y = 32) in;
+layout(local_size_x = 39, local_size_y = 39) in;
 layout(rgba32f, binding = 0) uniform image2D img_output;
 
 struct Camera {
@@ -50,7 +52,7 @@ vec3 render(vec3 rayOrigin, vec3 rayDir);
 vec3 GetNormal(vec3 pos);
 float sdPlane(vec3 p, vec4 n);
 vec3 getPointLight(vec3 color, vec3 normal, vec3 pos); // https://learnopengl.com/Lighting/Light-casters
-vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 prevColor, vec3 color, RayHit primaryObject);
+vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 color, RayHit primaryObject);
 float softshadow(vec3 ro, vec3 rd, float k);
 vec3 checkers(vec3 p);
 
@@ -158,10 +160,11 @@ RayHit reflectedRay(vec3 rayOrigin, vec3 rayDir)
     return dummy;
 }
 
-vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 prevColor, vec3 color, RayHit primaryObject)
+vec3 bounce(vec3 rayDir, vec3 pos, vec3 normal, vec3 color, RayHit primaryObject)
 {
     RayHit prevObject = primaryObject;
     float shadow = 1.0;
+    vec3 prevColor = primaryObject.color;
 
     for (int i = 1; i <= bounceVar; i++)
     {
@@ -237,7 +240,7 @@ vec3 render(vec3 rayOrigin, vec3 rayDir)
         }
 
         if (bounceVar > 0) 
-            color = bounce(rayDir, pos, normal, prevColor, color, t);
+            color = bounce(rayDir, pos, normal, color, t);
     
     }
     // Gamma Correction

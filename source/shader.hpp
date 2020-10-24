@@ -26,6 +26,11 @@ void setInt(unsigned int ID, const std::string &name, int value)
     glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
 }
 
+void setuInt(unsigned int ID, const std::string &name, unsigned int *value)
+{
+    glUniform1uiv(glGetUniformLocation(ID, name.c_str()), 1, value);
+}
+
 void setFloat(unsigned int ID, const std::string &name, float value)
 {
     glUniform1f(glGetUniformLocation(ID, name.c_str()), value);

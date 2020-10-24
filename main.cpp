@@ -73,8 +73,9 @@ int main(void)
     
     // printWorkGroupCount();
     // printWorkGroupSize();
-    printInvocations();
-
+    unsigned int invocations = printInvocations();
+    unsigned int workgroups = sqrt(invocations);
+    std::cout << "Maximum Workgroups:\t" << workgroups << std::endl;
 
     // Quad's Fragment and Vertex shader
     ShaderProgramSource basic = ParseShader("shaders/Quad.glsl");
@@ -97,6 +98,7 @@ int main(void)
 
         useShader(marching);
         setFloat(marching, "iTime", (float)glfwGetTime());
+        setuInt(marching, "workgroups", &workgroups);
 
         setVec4(marching, "camera.pos", camera.cameraPos.x, camera.cameraPos.y, camera.cameraPos.z, 0.0);
         setVec4(marching, "camera.dir", camera.forward.x, camera.forward.y, camera.forward.z, 0.0);
@@ -118,7 +120,7 @@ int main(void)
         setVec2(marching, "iMouse", glm::vec2(mouse.yaw, mouse.pitch));
 
         // Number of work groups in dispach: X, Y, Z
-        glDispatchCompute(SCREEN_WIDTH / 32, SCREEN_HEIGHT / 32, 1);
+        glDispatchCompute(SCREEN_WIDTH / workgroups, SCREEN_HEIGHT / workgroups, 1);
 
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 

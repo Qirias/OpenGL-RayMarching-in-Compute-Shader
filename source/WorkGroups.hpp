@@ -28,10 +28,12 @@ void printWorkGroupSize()
                                                     << " z: " << work_grp_size[2] << std::endl << std::endl; 
 }
 
-void printInvocations()
+int printInvocations()
 {
     int work_grp_inv;
     glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_grp_inv);
 
     std::cout << "max local work group invocations " << work_grp_inv << std::endl << std::endl;
+
+    return work_grp_inv;
 }
